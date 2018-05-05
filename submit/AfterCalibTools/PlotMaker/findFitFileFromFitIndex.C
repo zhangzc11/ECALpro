@@ -74,6 +74,7 @@ void findFitFileFromFitIndex(const Int_t& fitIndex = 5000,
   Int_t nMaxFile = isEB ? 30 : 7; // fitRes files goes from 0 to 30 (7) in EB (EE)
 
   string BarrelOrEndcap = isEB ? "Barrel" : "Endcap";
+  Bool_t fitFound = false;
 
   for (Int_t iFile = 0; iFile <= nMaxFile; iFile++ ) {
 
@@ -87,7 +88,7 @@ void findFitFileFromFitIndex(const Int_t& fitIndex = 5000,
     }
 
     string fit_rooplot = Form("Fit_n_%d_attempt0_rp",fitIndex);
-    Bool_t fitFound = f->GetListOfKeys()->Contains(fit_rooplot.c_str());
+    fitFound = f->GetListOfKeys()->Contains(fit_rooplot.c_str());
 
     f->Close();
     delete f;
@@ -99,6 +100,6 @@ void findFitFileFromFitIndex(const Int_t& fitIndex = 5000,
 
   }
 
-  cout << "Sorry, I didn't find the fit with index " << fitIndex << " anywhere." << endl;
+  if (not fitFound) cout << "Sorry, I didn't find the fit with index " << fitIndex << " anywhere." << endl;
 
 }

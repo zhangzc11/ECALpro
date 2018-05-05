@@ -104,7 +104,7 @@ void getRooplotWithIndex(const string& fitResFileOnEos = "",
 
   if (xframe) {
     xframe->GetYaxis()->SetTitle("#gamma#gamma pairs / 0.004 GeV/c^{2}");
-    xframe->GetXaxis()->SetTitle("#gamma#gamma invariant mass (GeV/c^{2})");
+    xframe->GetXaxis()->SetTitle("#gamma#gamma invariant mass [GeV/c^{2}]");
   }
 
   TFile* outputFile = new TFile((outputDIR + outputFileName).c_str(),"UPDATE");
@@ -150,21 +150,24 @@ void drawRooPlotFromFile(const string& inputDir = "", const bool isEB = true, co
 
   string canvasname = isEB ? "pi0MassEBxtal" : "pi0MassEExtal";
   if (not isPi0) canvasname = isEB ? "etaMassEBxtal" : "etaMassEExtal"; 
-  TCanvas *canvas = new TCanvas("canvas","",600,700);
+  TCanvas *canvas = new TCanvas("canvas","",700,700);
   canvas->cd();
   canvas->SetTickx(1);
   canvas->SetTicky(1);
   canvas->cd();
   // canvas->SetBottomMargin(0.3);
   canvas->SetRightMargin(0.06);
+  canvas->SetLeftMargin(0.18);
 
   xframe->GetYaxis()->SetTitle("#gamma#gamma pairs / 0.004 GeV/c^{2}");
-  xframe->GetXaxis()->SetTitle("#gamma#gamma invariant mass (GeV/c^{2})");
+  xframe->GetXaxis()->SetTitle("#gamma#gamma invariant mass [GeV/c^{2 }]");
 
   // to add a dummy legend
   TH1D* h1 = new TH1D("h1","",1,0,1);
   TH1D* h2 = new TH1D("h2","",1,0,1);
   TH1D* h3 = new TH1D("h3","",1,0,1);
+  TH1D* h4 = new TH1D("h4","",1,0,1);
+
   // data
   h1->SetStats(0);
   h1->SetLineColor(kBlack);
@@ -180,18 +183,23 @@ void drawRooPlotFromFile(const string& inputDir = "", const bool isEB = true, co
   h3->SetLineColor(kRed);
   h3->SetLineWidth(2);
   h3->SetLineStyle(2);
+  // S only
+  h4->SetStats(0);
+  h4->SetLineColor(kGreen+2);
+  h4->SetLineWidth(2);
+  h4->SetLineStyle(2);
 
   xframe->GetXaxis()->SetLabelSize(0.04);
   xframe->GetXaxis()->SetTitleSize(0.05);
-  xframe->GetYaxis()->SetTitleOffset(1.1);
+  xframe->GetYaxis()->SetTitleOffset(1.45);
   xframe->GetYaxis()->SetTitleSize(0.05);
   xframe->Draw();
 
   TLegend *leg = NULL;
   if (isPi0) {
-    if (isEB) leg = new TLegend(0.55,0.7,0.95,0.9);
+    if (isEB) leg = new TLegend(0.6,0.7,0.95,0.9);
     //    else leg = new TLegend(0.50,0.25,0.95,0.5);
-    else leg = new TLegend(0.50,0.65,0.95,0.9);
+    else leg = new TLegend(0.60,0.4,0.95,0.6);
   } else {
     leg = new TLegend(0.50,0.25,0.95,0.5);
   }
@@ -199,12 +207,13 @@ void drawRooPlotFromFile(const string& inputDir = "", const bool isEB = true, co
   leg->SetFillStyle(0);
   leg->SetBorderSize(0);
   leg->AddEntry(h1,"data","PLE");
-  leg->AddEntry(h2,"Signal + background","LF");
-  leg->AddEntry(h3,"background only","LF");
+  leg->AddEntry(h2,"S + B","LF");
+  leg->AddEntry(h4,"Signal","LF");
+  leg->AddEntry(h3,"Background","LF");
   leg->Draw("same");
   TLegend *leg2 = NULL;
   if (isEB) leg2 = new TLegend(0.50,0.1,0.99,0.3);
-  else  leg2 = new TLegend(0.50,0.1,0.99,0.3);
+  else  leg2 = new TLegend(0.4,0.14,0.89,0.34);
   leg2->SetFillColor(0);
   leg2->SetFillStyle(0);
   leg2->SetBorderSize(0);
@@ -346,7 +355,7 @@ void printSignificanceInFile(const string& calibMapFile = "",
 //===============================================
 
 
-void manageRooPlotFromFile(const string& dirName = "AlCaP0_Run2017A_runs296966to296980_v2", const bool usePi0 = true, const Int_t skip_EB1_EE2 = 0, const double lumi = 3.94, const int whichIteration = 0) {
+void manageRooPlotFromFile(const string& dirName = "AlCaP0_Run2017_DE_run304366_ContCorrEoverEtrueScaledToV2MC_ext1_fromIter6", const string& outDirName = "plot_approve_2017", const bool usePi0 = true, const Int_t skip_EB1_EE2 = 1, const double lumi = 9.8, const int whichIteration = 6, const string& subdirTag = "/EEp_ix27_iy87") {
 
   // intLumi is in /fb, use 2 digits after .
 
@@ -362,8 +371,8 @@ void manageRooPlotFromFile(const string& dirName = "AlCaP0_Run2017A_runs296966to
 
   int EBxtalIndex = 30003;
   string EBfitFileIndex = "15"; // need to find a way to derive it from EBxtalIndex
-  int EExtalIndex = 6397;
-  string EEfitFileIndex = "3"; // need to find a way to derive it from EExtalIndex
+  int EExtalIndex = 14018; //12001;
+  string EEfitFileIndex = "7"; //"6"; // need to find a way to derive it from EExtalIndex
 
   if (not isPi0) {
     EBxtalIndex = 30107;
@@ -374,8 +383,8 @@ void manageRooPlotFromFile(const string& dirName = "AlCaP0_Run2017A_runs296966to
 
   // string outputDirEB = "/afs/cern.ch/user/m/mciprian/www/pi0calib/ICplot/" + dirName + "/iter_" + iter + "/fitResPlots/Barrel/";
   // string outputDirEE = "/afs/cern.ch/user/m/mciprian/www/pi0calib/ICplot/" + dirName + "/iter_" + iter + "/fitResPlots/Endcap/";
-  string outputDirEB = "/afs/cern.ch/user/m/mciprian/www/pi0calib/plot_EPS_2017/" + dirName + "/iter_" + iter + "/fitResPlots/Barrel/";
-  string outputDirEE = "/afs/cern.ch/user/m/mciprian/www/pi0calib/plot_EPS_2017/" + dirName + "/iter_" + iter + "/fitResPlots/Endcap/";
+  string outputDirEB = "/afs/cern.ch/user/m/mciprian/www/pi0calib/" + outDirName + "/" + dirName + subdirTag + "/iter_" + iter + "/fitResPlots/Barrel/";
+  string outputDirEE = "/afs/cern.ch/user/m/mciprian/www/pi0calib/" + outDirName + "/" + dirName + subdirTag + "/iter_" + iter + "/fitResPlots/Endcap/";
 
   if (skip_EB1_EE2 != 1) createPlotDirAndCopyPhp(outputDirEB);
   if (skip_EB1_EE2 != 2) createPlotDirAndCopyPhp(outputDirEE);

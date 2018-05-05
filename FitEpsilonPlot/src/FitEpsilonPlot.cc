@@ -2821,6 +2821,8 @@ Pi0FitResult FitEpsilonPlot::FitEoverEtruePeakRooFit(TH1F* h1, Bool_t isSecondGe
 
   float xmin(0.15), yhi(0.8), ypass(0.05);
   if(mode==EtaEB) yhi=0.30;
+  if(mode==Pi0EE) yhi=0.5;
+ 
   if(mode==Pi0EB) {
     EBDetId thisebid(EBDetId::detIdFromDenseIndex(HistoIndex) ); 
     int ieta = foldInSuperModule_ ? thisebid.ietaSM() : thisebid.ieta();
