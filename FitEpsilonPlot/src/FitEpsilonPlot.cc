@@ -2060,6 +2060,8 @@ Pi0FitResult FitEpsilonPlot::FitMassPeakRooFit(TH1F* h, double xlo, double xhi, 
 
     float xmin(0.58), yhi(0.80), ypass(0.05);
     if(mode==EtaEB) yhi=0.30;
+    if(mode==Pi0EE) yhi=0.5;
+
     line = Form("Yield: %.0f #pm %.0f", Nsig.getVal(), Nsig.getError() );
     lat.DrawLatex(xmin,yhi, line.c_str());
 
