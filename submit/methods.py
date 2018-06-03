@@ -28,19 +28,20 @@ def printFillCfg1( outputfile ):
     outputfile.write("process.GlobalTag.globaltag = '" + globaltag + "'\n")
     #From DIGI
     if (FROMDIGI):
-        outputfile.write("#DUMMY RECHIT\n")
-        outputfile.write("process.dummyHits = cms.EDProducer('DummyRechitDigis',\n")
-        outputfile.write("                                     doDigi = cms.untracked.bool(True),\n")
-        outputfile.write("                                     # rechits\n")                                                                                                
-        outputfile.write("                                     barrelHitProducer      = cms.InputTag('hltAlCaPi0EBUncalibrator','pi0EcalRecHitsEB'),\n")
-        outputfile.write("                                     endcapHitProducer      = cms.InputTag('hltAlCaPi0EEUncalibrator','pi0EcalRecHitsEE'),\n")
-        outputfile.write("                                     barrelRecHitCollection = cms.untracked.string('dummyBarrelRechits'),\n")
-        outputfile.write("                                     endcapRecHitCollection = cms.untracked.string('dummyEndcapRechits'),\n")
-        outputfile.write("                                     # digis\n")                                                                                                                               
-        outputfile.write("                                     barrelDigis            = cms." + EBdigi + ",\n")
-        outputfile.write("                                     endcapDigis            = cms." + EEdigi + ",\n")
-        outputfile.write("                                     barrelDigiCollection   = cms.untracked.string('dummyBarrelDigis'),\n")
-        outputfile.write("                                     endcapDigiCollection   = cms.untracked.string('dummyEndcapDigis'))\n")
+        if not skipDummyHitsInFill:
+            outputfile.write("#DUMMY RECHIT\n")
+            outputfile.write("process.dummyHits = cms.EDProducer('DummyRechitDigis',\n")
+            outputfile.write("                                     doDigi = cms.untracked.bool(True),\n")
+            outputfile.write("                                     # rechits\n")                                                                                                
+            outputfile.write("                                     barrelHitProducer      = cms.InputTag('hltAlCaPi0EBUncalibrator','pi0EcalRecHitsEB'),\n")
+            outputfile.write("                                     endcapHitProducer      = cms.InputTag('hltAlCaPi0EEUncalibrator','pi0EcalRecHitsEE'),\n")
+            outputfile.write("                                     barrelRecHitCollection = cms.untracked.string('dummyBarrelRechits'),\n")
+            outputfile.write("                                     endcapRecHitCollection = cms.untracked.string('dummyEndcapRechits'),\n")
+            outputfile.write("                                     # digis\n")                                                                                                                               
+            outputfile.write("                                     barrelDigis            = cms." + EBdigi + ",\n")
+            outputfile.write("                                     endcapDigis            = cms." + EEdigi + ",\n")
+            outputfile.write("                                     barrelDigiCollection   = cms.untracked.string('dummyBarrelDigis'),\n")
+            outputfile.write("                                     endcapDigiCollection   = cms.untracked.string('dummyEndcapDigis'))\n")
         outputfile.write("\n")
         if(FixGhostDigis):
             outputfile.write("# GHOST DIGIS CLEANER (FOR 2015 STREAM DATA)\n")
@@ -67,8 +68,12 @@ def printFillCfg1( outputfile ):
                outputfile.write("process.ecalMultiFitUncalibRecHit.EBdigiCollection = cms.InputTag('cleanedEcalDigis','ebCleanedDigis')\n")
                outputfile.write("process.ecalMultiFitUncalibRecHit.EEdigiCollection = cms.InputTag('cleanedEcalDigis','eeCleanedDigis')\n")
            else:
-               outputfile.write("process.ecalMultiFitUncalibRecHit.EBdigiCollection = cms.InputTag('dummyHits','dummyBarrelDigis','analyzerFillEpsilon')\n")
-               outputfile.write("process.ecalMultiFitUncalibRecHit.EEdigiCollection = cms.InputTag('dummyHits','dummyEndcapDigis','analyzerFillEpsilon')\n")    
+               if skipDummyHitsInFill:
+                   outputfile.write("process.ecalMultiFitUncalibRecHit.EBdigiCollection = cms.InputTag('hltAlCaPi0EBRechitsToDigis','pi0EBDigis')\n")
+                   outputfile.write("process.ecalMultiFitUncalibRecHit.EEdigiCollection = cms.InputTag('hltAlCaPi0EERechitsToDigis','pi0EEDigis')\n")
+               else:
+                   outputfile.write("process.ecalMultiFitUncalibRecHit.EBdigiCollection = cms.InputTag('dummyHits','dummyBarrelDigis','analyzerFillEpsilon')\n")
+                   outputfile.write("process.ecalMultiFitUncalibRecHit.EEdigiCollection = cms.InputTag('dummyHits','dummyEndcapDigis','analyzerFillEpsilon')\n")    
     
            outputfile.write("process.ecalMultiFitUncalibRecHit.algoPSet.useLumiInfoRunHeader = False #added this line to make code run\n") #can enable setting --> DigiCustomization = True <-- in parameters.py, but this also set --> outputfile.write("process.ecalMultiFitUncalibRecHit.algoPSet.activeBXs = cms.vint32(-5,-4,-3,-2,-1,0,1,2,3,4) #Are 10 (-5-5). For 50ns is (-4,-2,0,2,4) \
 #No .algoPSet. in old releases\n")  <-- line above , so I prefer to add it here
@@ -80,8 +85,12 @@ def printFillCfg1( outputfile ):
                outputfile.write("process.ecalweight.EBdigiCollection = cms.InputTag('cleanedEcalDigis','ebCleanedDigis')\n")
                outputfile.write("process.ecalweight.EEdigiCollection = cms.InputTag('cleanedEcalDigis','eeCleanedDigis')\n")
            else:
-               outputfile.write("process.ecalweight.EBdigiCollection = cms.InputTag('dummyHits','dummyBarrelDigis','analyzerFillEpsilon')\n")
-               outputfile.write("process.ecalweight.EEdigiCollection = cms.InputTag('dummyHits','dummyEndcapDigis','analyzerFillEpsilon')\n")               
+               if skipDummyHitsInFill:
+                   outputfile.write("process.ecalweight.EBdigiCollection = cms.InputTag('hltAlCaPi0EBRechitsToDigis','pi0EBDigis')\n")
+                   outputfile.write("process.ecalweight.EEdigiCollection = cms.InputTag('hltAlCaPi0EERechitsToDigis','pi0EEDigis')\n")
+               else:
+                   outputfile.write("process.ecalweight.EBdigiCollection = cms.InputTag('dummyHits','dummyBarrelDigis','analyzerFillEpsilon')\n")
+                   outputfile.write("process.ecalweight.EEdigiCollection = cms.InputTag('dummyHits','dummyEndcapDigis','analyzerFillEpsilon')\n")               
         outputfile.write("#UNCALIB to CALIB\n")
         outputfile.write("from RecoLocalCalo.EcalRecProducers.ecalRecHit_cfi import *\n")
         outputfile.write("process.ecalDetIdToBeRecovered =  RecoLocalCalo.EcalRecProducers.ecalDetIdToBeRecovered_cfi.ecalDetIdToBeRecovered.clone()\n")
@@ -183,7 +192,8 @@ def printFillCfg1( outputfile ):
     # outputfile.write(")\n")
     outputfile.write("process.options = cms.untracked.PSet(\n")
     outputfile.write("   wantSummary = cms.untracked.bool(True),\n")
-    #outputfile.write("   SkipEvent = cms.untracked.vstring('ProductNotFound','CrystalIDError')\n")
+    if skipDummyHitsInFill:
+        outputfile.write("   SkipEvent = cms.untracked.vstring('ProductNotFound')\n")
     outputfile.write(")\n")
     outputfile.write("process.source = cms.Source('PoolSource',\n")
     #outputfile.write("                            inputCommands = cms.untracked.vstring( #type_Module_instance_process\n")
@@ -214,6 +224,15 @@ def printFillCfg2( outputfile, pwd , iteration, outputDir, ijob ):
 #           outputfile.write("   myLumis = LumiList.LumiList(filename = '" + pwd + "/../../CalibCode/FillEpsilonPlot/data/" + json_file + "').getCMSSWString().split(',')\n")
 #       outputfile.write("   process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange()\n")
 #       outputfile.write("   process.source.lumisToProcess.extend(myLumis)\n")
+    if(not useJsonFilterInCpp and len(json_file)>0):
+        outputfile.write("import FWCore.PythonUtilities.LumiList as LumiList\n")
+        outputfile.write("json_file = '" + json_file + "'\n")
+        if json_file.startswith('/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification'):
+            outputfile.write("process.source.lumisToProcess = LumiList.LumiList(filename = json_file).getVLuminosityBlockRange()\n")
+        else:
+            outputfile.write("process.source.lumisToProcess = LumiList.LumiList(filename = 'CalibCode/FillEpsilonPlot/data/" + json_file + "').getVLuminosityBlockRange()\n")
+            
+
     outputfile.write("\n")
     outputfile.write("process.analyzerFillEpsilon = cms.EDAnalyzer('FillEpsilonPlot')\n")
     outputfile.write("process.analyzerFillEpsilon.OutputDir = cms.untracked.string('" +  outputDir + "')\n")
@@ -346,7 +365,7 @@ def printFillCfg2( outputfile, pwd , iteration, outputDir, ijob ):
     outputfile.write("process.analyzerFillEpsilon.S4S9_EE_low = cms.untracked.double(" + S4S9_EE_low + ")\n")
     outputfile.write("process.analyzerFillEpsilon.S4S9_EE_high = cms.untracked.double(" + S4S9_EE_high + ")\n")
     outputfile.write("process.analyzerFillEpsilon.Barrel_orEndcap = cms.untracked.string('" + Barrel_or_Endcap + "')\n")
-    if(len(json_file)>0):
+    if(useJsonFilterInCpp and len(json_file)>0):
        if json_file.startswith('/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification'): 
            outputfile.write("process.analyzerFillEpsilon.JSONfile = cms.untracked.string('" + json_file + "')\n")
        else:
@@ -396,7 +415,8 @@ def printFillCfg2( outputfile, pwd , iteration, outputDir, ijob ):
     outputfile.write("    print 'LASER '+str(process.ecalPi0ReCorrected.doLaserCorrections)\n")
     outputfile.write("    process.p *= process.ecalPi0ReCorrected\n")
     if (FROMDIGI):
-        outputfile.write("process.p *= process.dummyHits\n")
+        if not skipDummyHitsInFill:
+            outputfile.write("process.p *= process.dummyHits\n")
         if(FixGhostDigis):
             outputfile.write("process.p *= process.cleanedEcalDigis\n")
         if(MULTIFIT):
