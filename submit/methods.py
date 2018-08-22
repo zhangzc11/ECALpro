@@ -227,11 +227,11 @@ def printFillCfg2( outputfile, pwd , iteration, outputDir, ijob ):
     if(not useJsonFilterInCpp and len(json_file)>0):
         outputfile.write("import FWCore.PythonUtilities.LumiList as LumiList\n")
         outputfile.write("json_file = '" + json_file + "'\n")
-        if json_file.startswith('/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification'):
+        if json_file.startswith('/afs/cern.ch/'):
             outputfile.write("process.source.lumisToProcess = LumiList.LumiList(filename = json_file).getVLuminosityBlockRange()\n")
         else:
             outputfile.write("process.source.lumisToProcess = LumiList.LumiList(filename = 'CalibCode/FillEpsilonPlot/data/" + json_file + "').getVLuminosityBlockRange()\n")
-            
+
 
     outputfile.write("\n")
     outputfile.write("process.analyzerFillEpsilon = cms.EDAnalyzer('FillEpsilonPlot')\n")
@@ -366,7 +366,7 @@ def printFillCfg2( outputfile, pwd , iteration, outputDir, ijob ):
     outputfile.write("process.analyzerFillEpsilon.S4S9_EE_high = cms.untracked.double(" + S4S9_EE_high + ")\n")
     outputfile.write("process.analyzerFillEpsilon.Barrel_orEndcap = cms.untracked.string('" + Barrel_or_Endcap + "')\n")
     if(useJsonFilterInCpp and len(json_file)>0):
-       if json_file.startswith('/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification'): 
+       if json_file.startswith('/afs/cern.ch/'): 
            outputfile.write("process.analyzerFillEpsilon.JSONfile = cms.untracked.string('" + json_file + "')\n")
        else:
            outputfile.write("process.analyzerFillEpsilon.JSONfile = cms.untracked.string('CalibCode/FillEpsilonPlot/data/" + json_file + "')\n")
