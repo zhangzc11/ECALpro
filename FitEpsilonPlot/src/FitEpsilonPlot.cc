@@ -1826,7 +1826,7 @@ Pi0FitResult FitEpsilonPlot::FitMassPeakRooFit(TH1F* h, double xlo, double xhi, 
     canvas->SetTicky(1);
     canvas->cd();
     canvas->SetRightMargin(0.06);
-    canvas->SetRightMargin(0.14);
+    canvas->SetLeftMargin(0.15);
 
     RooRealVar x("x","#gamma#gamma invariant mass",xlo, xhi, "GeV/c^2");
 
