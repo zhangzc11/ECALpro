@@ -144,7 +144,7 @@ for iters in range(nIterations):
                 goodNtp = 0
                 for ih in range(njobs):
                     eosFile = eosPath + "/" + dirname + "/iter_" + str(iters) + "/" + NameTag + "EcalNtp_" + str(ih) + ".root"
-                    testNtpFile_s = myeoslsl + ' ' + eosFile
+                    testNtpFile_s = 'ls -l ' + eosFile   # eos is now mounted on lxplus
                     print "checking the presence and the sanity of EcalNtp file: " + eosFile
                     testNtpFile = subprocess.Popen([testNtpFile_s], stdout=subprocess.PIPE, shell=True);
                     output = testNtpFile.communicate()[0]
