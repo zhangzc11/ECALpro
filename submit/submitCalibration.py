@@ -64,7 +64,7 @@ if( isOtherT2 and storageSite=="T2_BE_IIHE" and isCRAB ):
    folderCreation.communicate()
 else:
    print "[calib] Creating folders on EOS"
-   folderCreation = subprocess.Popen(['mkdir' + eosPath + '/' + dirname ], stdout=subprocess.PIPE, shell=True);
+   folderCreation = subprocess.Popen(['mkdir ' + eosPath + '/' + dirname ], stdout=subprocess.PIPE, shell=True);
    folderCreation.communicate()
 
 for iter in range(nIterations):
@@ -74,7 +74,7 @@ for iter in range(nIterations):
        folderCreation.communicate()
     else:
        print "[calib]  ---  mkdir " + eosPath + '/' + dirname + '/iter_' + str(iter)
-       folderCreation = subprocess.Popen(['mkdir' + eosPath + '/' + dirname + '/iter_' + str(iter)], stdout=subprocess.PIPE, shell=True);
+       folderCreation = subprocess.Popen(['mkdir ' + eosPath + '/' + dirname + '/iter_' + str(iter)], stdout=subprocess.PIPE, shell=True);
        folderCreation.communicate()
 
 #-------- fill cfg files --------#
