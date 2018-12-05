@@ -89,6 +89,7 @@ inputlistbase_v = [x for x in inputlist_f.readlines() if not x.lstrip().startswi
 print "[calib] Total number of files to be processed: " , len(inputlistbase_v)
 print "[calib] Creating cfg Files"
 
+ijob = 0
 for iter in range(nIterations):
     print "[calib]  '-- Fill::Iteration " + str(iter)
     # copy by value and not by reference
