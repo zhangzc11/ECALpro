@@ -2,15 +2,15 @@
 
 using namespace std;
 
-void makeICmapAndDump(const string& outDir = "/afs/cern.ch/user/m/mciprian/www/pi0calib/ICplot/AlCaP0_Run2017_C_CCiter0/iter_6/2DMaps/ICmaps/IC_work/",
-		      const string& inputFile = "root://eoscms//eos/cms/store/group/dpg_ecal/alca_ecalcalib/piZero2017/mciprian/AlCaP0_Run2017_C_CCiter0/iter_6/AlCaP0_Run2017_C_CCiter0_calibMap.root",
+void makeICmapAndDump(const string& outDir = "/afs/cern.ch/user/m/mciprian/www/pi0calib/ICplot/AlCaP0_AllRun2017_EE/iter_6/2DMaps/ICmaps/IC_work/",
+		      const string& inputFile = "root://eoscms//eos/cms/store/group/dpg_ecal/alca_ecalcalib/piZero2017/mciprian/AlCaP0_AllRun2017_EE/iter_6/AlCaP0_AllRun2017_EE_calibMap.root",
 		      const string& outICdumpFileName = "dumpIC_norm1etaRing.dat",
 		      const string& canvasNamePrefix = "calibMap_EB",
 		      const Double_t mapMin = 0.95,
 		      const Double_t mapMax = 1.05,
 		      const Bool_t iphiOnXaxis = true,
 		      const Bool_t iphiOnXaxisSM = false,
-		      const Int_t all0_EB1_EE2 = 0
+		      const Int_t all0_EB1_EE2 = 2
 		      ) 
 
 {
