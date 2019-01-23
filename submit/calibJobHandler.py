@@ -84,18 +84,18 @@ for iters in range(nIterations):
         for ijob in range(njobs):
             #In case you want the stat. syst
             if ( mode.find('BATCH_RESU_SYST_1') != -1 ):
-                 env_script_n = open(outputdir + "/cfgFile/Fill/fillEpsilonPlot_iter_" + str(iters) + "_job_" + str(ijob) + ".py", 'a')
+                 env_script_n = open(outputdir + "/cfgFile/Fill/iter_" + str(iters) + "/fillEps_iter_" + str(iters) + "_job_" + str(ijob) + ".py", 'a')
                  SystParamLine = 'process.analyzerFillEpsilon.SystOrNot = cms.untracked.double(1)\n'
                  env_script_n.write(SystParamLine)
                  env_script_n.close()
             if ( mode.find('BATCH_RESU_SYST_2') != -1 ):
-                 env_script_n = open(outputdir + "/cfgFile/Fill/fillEpsilonPlot_iter_" + str(iters) + "_job_" + str(ijob) + ".py", 'a')
+                 env_script_n = open(outputdir + "/cfgFile/Fill/iter_" + str(iters) + "/fillEps_iter_" + str(iters) + "_job_" + str(ijob) + ".py", 'a')
                  SystParamLine = 'process.analyzerFillEpsilon.SystOrNot = cms.untracked.double(2)\n'
                  env_script_n.write(SystParamLine)
                  env_script_n.close()
             # preparing submission of filling tasks
-            fill_log_n = logPath + "/fillEpsilonPlot_iter_" + str(iters) + "_job_" + str(ijob) + ".log"
-            fill_src_n = srcPath + "/Fill/submit_iter_"     + str(iters) + "_job_" + str(ijob) + ".sh"
+            fill_log_n = logPath + "/iter_" + str(iters) + "/fillEps_iter_" + str(iters) + "_job_" + str(ijob) + ".log"
+            fill_src_n = srcPath + "/Fill/iter_" + str(iters) + "/submit_iter_"     + str(iters) + "_job_" + str(ijob) + ".sh"
             submit_s=""
             if not(Silent):
                  submit_s = "bsub -q " + queue + " -o " + fill_log_n + " " + fill_src_n
@@ -152,10 +152,10 @@ for iters in range(nIterations):
                     if len(output)>0:
                         print "output = ",output
                         fsize = int(output.split()[4])
-                    if len(output)==0 or fsize<1000:
+                    if len(output)==0 or fsize<100000:
                         print "The file " + eosFile + " is not present, or empty. Resubmitting ..."
-                        Ntp_src_n = srcPath + "/Fill/submit_iter_" + str(iters) + "_job_" + str(ijob) + ".sh"
-                        Ntp_log_n = logPath + "/fillEpsilonPlot_iter_" + str(iters) + "_job_" + str(ijob) + "_recovery_" + str(NtpRecoveryAttempt) + ".log"
+                        Ntp_src_n = srcPath + "/Fill/iter_" + str(iters) + "/submit_iter_" + str(iters) + "_job_" + str(ijob) + ".sh"
+                        Ntp_log_n = logPath + "/iter_" + str(iters) + "/fillEps_iter_" + str(iters) + "_job_" + str(ijob) + "_recovery_" + str(NtpRecoveryAttempt) + ".log"
                         Ntpsubmit_s = "bsub -q " + queue + " -o " + Ntp_log_n + " bash " + Ntp_src_n
                         print Ntpsubmit_s
                         subJobs = subprocess.Popen([Ntpsubmit_s], stdout=subprocess.PIPE, shell=True);
@@ -241,7 +241,7 @@ It is better that you run on all the output files using a TChain. Indeed, these 
                    else:
                        filesize = os.path.getsize(filetoCheck.strip())
                        #If is corrupted (size too small), remove it from the list
-                       if( filesize<10000 ):
+                       if( filesize<100000 ):
                            print 'HADD::Bad size for: ' + str(filetoCheck)
                            print 'removing from Hadd, in: ' + str(FoutGrep_2) + str(NumToRem)
                            f1 = open(str(FoutGrep_2) + str(NumToRem),"w+")
@@ -297,7 +297,7 @@ It is better that you run on all the output files using a TChain. Indeed, these 
                 eosFile = eosPath + "/" + dirname + "/iter_" + str(iters) + "/" + NameTag + "epsilonPlots_" + str(ih) + ".root"
                 filesize=0
                 if os.path.exists(eosFile): filesize = os.path.getsize(eosFile)
-                if filesize<1000:
+                if filesize<100000:
                     print "The file " + eosFile + " is not present, or empty. Redoing hadd..."
                     Hadd_src_n = srcPath + "/hadd/HaddCfg_iter_" + str(iters) + "_job_" + str(ih) + ".sh"
                     Hadd_log_n = logPath + "/HaddCfg_iter_" + str(iters) + "_job_" + str(ih) + "_recovery_" + str(HaddRecoveryAttempt) + ".log"
