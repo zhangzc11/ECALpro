@@ -38,8 +38,8 @@ isEoverEtrue = False if isMC==False else True # automatically set to False if is
 MakeNtuple4optimization = False
 useStreamSelection = False   # for now it only work with MakeNtuple4optimization = True, otherwise it is ignored, it is a hardcoded way to use the stream selection below
 #InputList and Folder name
-inputlist_n      = 'InputList/purified_AlCaP0_Run2017_23_12_2018.list' #purified_AlCaP0_Run2018_02_06_2018.list' if isMC==False else 'InputList/MultiPion_FlatPt-1To15_PhotonPtFilter_RunIIFall17DRPremix-94X_mc2017_realistic_v10.list'  #'InputList/Gun_FlatPt1to15_MultiPion_withPhotonPtFilter_pythia8.list' # 'InputList/purified_AlCaP0_Run2017_B.list' # 'InputList/testMC.list'
-dirname          = 'AlCaP0_AllRun2017_EE_ext2_fromIter0_condor' if isMC==False else 'pi0Gun_MCV2_EoverEtrue_foldSM_EoverEtrueCC_iter1'   #'pi0Gun_MCV2_EoverEtrue_foldSM' #'testMC_all_v2' #'AlCaP0_IC2017_upTo21September2017_2012regression_v2' # 'test' 
+inputlist_n      = 'InputList/test_AlCaP0_Run2017_23_12_2018.list' #purified_AlCaP0_Run2017_23_12_2018.list' if isMC==False else 'InputList/MultiPion_FlatPt-1To15_PhotonPtFilter_RunIIFall17DRPremix-94X_mc2017_realistic_v10.list'  #'InputList/Gun_FlatPt1to15_MultiPion_withPhotonPtFilter_pythia8.list' # 'InputList/purified_AlCaP0_Run2017_B.list' # 'InputList/testMC.list'
+dirname          = 'test_AlCaP0_AllRun2017_condor' if isMC==False else 'pi0Gun_MCV2_EoverEtrue_foldSM_EoverEtrueCC_iter1'   #'pi0Gun_MCV2_EoverEtrue_foldSM' #'testMC_all_v2' #'AlCaP0_IC2017_upTo21September2017_2012regression_v2' # 'test' 
 Silent           = False                 # True->Fill modules is silent; False->Fill modules has a standard output
 #TAG, QUEUE and ITERS
 NameTag          = dirname+'_' #'AlcaP0_2017_v3_'                   # Tag to the names to avoid overlap
@@ -48,7 +48,7 @@ queue            = 'cmscaf1nd'
 nIterations      = 7 if isMC==False else 1 # 7
 #nThread          = 4 # if bigger than 1, enable multithreading, but I'm not sure if ECALpro supports it (see methods.py searching nThread)
 
-SubmitFurtherIterationsFromExisting = True
+SubmitFurtherIterationsFromExisting = False
 # maybe I don't need the root://eoscms/ prefix if eos is mounted
 startingCalibMap = 'root://eoscms//eos/cms/store/group/dpg_ecal/alca_ecalcalib/piZero2017/mciprian/AlCaP0_AllRun2017_EE_ext1_fromIter6_condor/iter_0/AlCaP0_AllRun2017_EE_ext1_fromIter6_condor_calibMap.root' # used  only if SubmitFurtherIterationsFromExisting is True
 SystOrNot = 0 # can be 0, 1 or 2 to run on all (default), even or odd events. It works only if you submit this new iteration from an existing one, therefore SubmitFurtherIterationsFromExisting must be set true. Tipically 0 is the default and has no real effect, it is like submitting usual iterations.  
@@ -397,7 +397,7 @@ pedestalTagRecord='EcalPedestalsRcd';pedestalTag='EcalPedestals_timestamp_UltraL
 laserAlphaTagRecord='EcalLaserAlphasRcd';laserAlphaTag='EcalLaserAlphas_EB152-150_EE116_107_SICoptimized17';laserAlphaDB='frontier://FrontierProd/CMS_CONDITIONS'
 ESIntercalibTagRecord='';ESIntercalibTag='';ESIntercalibDB='frontier://FrontierProd/CMS_CONDITIONS'
 ESEEIntercalibTagRecord='';ESEEIntercalibTag='';ESEEIntercalibDB='frontier://FrontierProd/CMS_CONDITIONS'
-intercalibTagRecord='EcalIntercalibConstantsRcd';intercalibTag='EcalIntercalibConstants_UL2017_SingleIOV_run297056_v1';intercalibDB='frontier://FrontierProd/CMS_CONDITIONS'
+intercalibTagRecord='EcalIntercalibConstantsRcd';intercalibTag='EcalIntercalibConstants_Run2017BCDEF_run297056_eopPNEB_v1';intercalibDB='frontier://FrontierProd/CMS_CONDITIONS'
 linearCorrectionsTagRecord='';linearCorrectionsTag='';linearCorrectionsDB='frontier://FrontierProd/CMS_CONDITIONS'
 
 

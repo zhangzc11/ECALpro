@@ -17,9 +17,23 @@ from methods import *
 
 
 def checkNjobsCondor(grepArg="ecalpro"):
-    checkJobs = subprocess.Popen(['condor_q -af JobBatchName| grep {gr} | wc -l'.format(gr=grepArg)], stdout=subprocess.PIPE, shell=True);
-    nRetjobs = int(checkJobs.communicate()[0])
-    return nRetjobs
+
+    # condor_q might fail from time to time, so check whether it is working by asking condor_q first
+    # this should return some lines like:
+    # -- Schedd: pccmsrm31.dyndns.cern.ch : <128.141.87.213:9618?... @ 02/05/19 15:06:41
+    # OWNER BATCH_NAME      SUBMITTED   DONE   RUN    IDLE   HOLD  TOTAL JOB_IDS
+    #
+    # 0 jobs; 0 completed, 0 removed, 0 idle, 0 running, 0 held, 0 suspended
+
+    checkJobs = subprocess.Popen(['condor_q'], stdout=subprocess.PIPE, shell=True);
+    tmp = str(checkJobs.communicate()[0])
+    if all(x in tmp for x in ["OWNER", "BATCH_NAME", "SUBMITTED", "jobs", "completed", "removed"]):   # a very dumb check, I know
+        checkJobs = subprocess.Popen(['condor_q -af JobBatchName| grep {gr} | wc -l'.format(gr=grepArg)], stdout=subprocess.PIPE, shell=True);
+        nRetjobs = str(checkJobs.communicate()[0])
+        return nRetjobs
+    else:
+        # something wring with condor, return a dummy positive number to tell the code to keep checking
+        return 9999 
 
 
 # helper function to save some lines, the file is not opened not closed here, this must be handled outside
@@ -146,7 +160,7 @@ for iters in range(nIterations):
         print 'Waiting for filling jobs to be finished...'
         # Daemon cheking running jobs
         while nFilljobs > 0 :
-            time.sleep(60)
+            time.sleep(300)
             nFilljobs = checkNjobsCondor("ecalpro_Fill")
             print "I still see {n} jobs for Fill part".format(n=nFilljobs)
             checkJobs2 = subprocess.Popen(['rm -rf ' + pwd + '/core.*'], stdout=subprocess.PIPE, shell=True);
@@ -206,7 +220,7 @@ for iters in range(nIterations):
                 # Daemon cheking running jobs
                 print "Checking recovery of Ntp ..."
                 while nFilljobs > 0 :
-                    time.sleep(60)
+                    time.sleep(300)
                     nFilljobs = checkNjobsCondor("ecalpro_Fill_recovery")
                     print "I still see {n} jobs for Fill_recovery part".format(n=nFilljobs)
                     checkJobs2 = subprocess.Popen(['rm -rf ' + pwd + '/core.*'], stdout=subprocess.PIPE, shell=True);
@@ -353,7 +367,7 @@ It is better that you run on all the output files using a TChain. Indeed, these 
         print 'Waiting for all the hadd...'
         # Daemon cheking running jobs
         while nHaddjobs > 0 :
-            time.sleep(60)
+            time.sleep(120)
             nHaddjobs = checkNjobsCondor("ecalpro_Hadd")
             print "I still see {n} jobs for Hadd part".format(n=nHaddjobs)
             #checkJobs2 = subprocess.Popen(['rm -rf ' + pwd + '/core.*'], stdout=subprocess.PIPE, shell=True);
@@ -421,7 +435,7 @@ It is better that you run on all the output files using a TChain. Indeed, these 
             # Daemon cheking running jobs
             print "Checking recovery of Hadd ..."
             while nHaddjobs > 0 :
-                time.sleep(60)
+                time.sleep(120)
                 nHaddjobs = checkNjobsCondor("ecalpro_Hadd_recovery")
                 print "I still see {n} jobs for Hadd_recovery part".format(n=nHaddjobs)
                 #checkJobs2 = subprocess.Popen(['rm -rf ' + pwd + '/core.*'], stdout=subprocess.PIPE, shell=True);
@@ -463,7 +477,7 @@ It is better that you run on all the output files using a TChain. Indeed, these 
         print 'Waiting for the Final hadd...'
         # Daemon cheking running jobs
         while nFinHaddjobs > 0 :
-            time.sleep(10)
+            time.sleep(30)
             nFinHaddjobs = checkNjobsCondor("ecalpro_FinalHadd")
             print "I still see {n} jobs for FinalHadd part".format(n=nFinHaddjobs)
         print 'Done with final hadd'
@@ -539,7 +553,7 @@ If this is not the case, modify FillEpsilonPlot.cc
         print 'Waiting for fit jobs to be finished...'
         # Daemon cheking running jobs
         while nFitjobs > 0 :
-            time.sleep(10)
+            time.sleep(20)
             nFitjobs = checkNjobsCondor("ecalpro_Fit")
             print "I still see {n} jobs for Fit part".format(n=nFitjobs)
         print "Done with fitting! Now we have to merge all fits in one Calibmap.root"
