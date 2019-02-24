@@ -8,20 +8,20 @@
 ##############################################
 
 
-iter_ini=6                                                     # first iteration to use
-iter_fin=6                                                      # last iteration to use: it is included in sequence below
+iter_ini=0                                                     # first iteration to use
+iter_fin=0                                                      # last iteration to use: it is included in sequence below
 #path="/store/group/dpg_ecal/alca_ecalcalib/piZero2016/emanuele/"  # path to directory on eos
 #path="/store/group/dpg_ecal/alca_ecalcalib/piZero2016/mciprian/"  # path to directory on eos
 #path="/store/group/dpg_ecal/alca_ecalcalib/piZero2016/zhicaiz/"  # path to directory on eos
-path="/store/group/dpg_ecal/alca_ecalcalib/piZero2017/mciprian/"  # path to directory on eos
+path="/store/group/dpg_ecal/alca_ecalcalib/piZero_Run2/mciprian/"  # path to directory on eos
 #dirName="AlcaP0_Run2016G_sel16_reg12"                            # dirname (see CalibCode/submit/parameters.py)
-dirName="AlCaP0_AllRun2017_EE"
+dirName="AlCaP0_AllRun2017_condor"
 #tagName="AlCaP0_Run2017B_3July_upToRun297723_ext1_"                           # TagName (see CalibCode/submit/parameters.py) 
 tagName="${dirName}_"
 
 Pi0orEta="Pi0"  # possible options are Pi0 and Eta, axis ranges are set a little differently
 
-wwwBasePath="/afs/cern.ch/user/m/mciprian/www/pi0calib/ICplot/"   # base directory where plots are stored (other directories are created inside this path) 
+wwwBasePath="/afs/cern.ch/user/m/mciprian/www/pi0calib/ICplot_Legacy/"   # base directory where plots are stored (other directories are created inside this path) 
 
 # list of source files to compile (except main) without extension (which is supposed to be .C in the following)
 sourceFileList=(calibAnaEcal_base calibAnaEcal calibAnaEcalEB calibAnaEcalEE)  

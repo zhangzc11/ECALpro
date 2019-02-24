@@ -836,3 +836,65 @@ void divideEBmap(TH2* h, const TH2* num, const TH2* den, const Bool_t noBadXtals
 
 
 }  
+
+
+//=============================================
+
+
+void divideEEmap(TH2* h, const TH2* num, const TH2* den, const Bool_t noBadXtals = true, const Double_t ICforBadXtals = -1.0) {
+
+  // set h equal to num/den
+  // if noBadXtals = true, set any bad xtal to ICforBadXtals
+  // in general dead xtals should have IC 0 or 1 or maybe -1
+  // in all other functions, tals with IC <= 0 or equal to 1 are not used for normalization
+
+  Int_t num_nBinsX = num->GetNbinsX();
+  Int_t num_nBinsY = num->GetNbinsY();
+  Int_t den_nBinsX = den->GetNbinsX();
+  Int_t den_nBinsY = den->GetNbinsY();
+  Int_t h_nBinsX   = h->GetNbinsX();
+  Int_t h_nBinsY   = h->GetNbinsY();
+
+  if (num_nBinsX != den_nBinsX) {
+    cout << "Warning in divideEBmap(): num and den have different number of bins in X ("<< num_nBinsX << "," << den_nBinsX << "). Exit." << endl;
+    exit(EXIT_FAILURE);
+  }
+  if (num_nBinsY != den_nBinsY) {
+    cout << "Warning in divideEBmap(): num and den have different number of bins in Y ("<< num_nBinsY << "," << den_nBinsY << "). Exit." << endl;
+    exit(EXIT_FAILURE);
+  }
+  if (h_nBinsX != den_nBinsX) {
+    cout << "Warning in divideEBmap(): h and den have different number of bins in X ("<< h_nBinsX << "," << den_nBinsX << "). Exit." << endl;
+    exit(EXIT_FAILURE);
+  }
+  if (h_nBinsY != den_nBinsY) {
+    cout << "Warning in divideEBmap(): h and den have different number of bins in Y ("<< h_nBinsY << "," << den_nBinsY << "). Exit." << endl;
+    exit(EXIT_FAILURE);
+  }
+
+
+  Int_t bin = -1;
+  Double_t ratio = 0.0;
+
+  for (Int_t ix = 1; ix <= num_nBinsX; ++ix) {
+
+    for (Int_t iy = 1; iy <= num_nBinsY; ++iy) {
+
+      bin = num->GetBin(ix,iy);
+      if (noBadXtals) {
+	if (num->GetBinContent(bin) > EPSILON && fabs(num->GetBinContent(bin) -1.0) > EPSILON)
+	  ratio = (den->GetBinContent(bin) != 0.0) ? (num->GetBinContent(bin) / den->GetBinContent(bin)) : ICforBadXtals;
+	else
+	  ratio = ICforBadXtals;
+      } else {
+	ratio = (den->GetBinContent(bin) != 0.0) ? (num->GetBinContent(bin) / den->GetBinContent(bin)) : ICforBadXtals;
+      }
+
+      h->SetBinContent(bin, ratio);
+
+    }
+
+  }
+
+
+}  
