@@ -83,6 +83,11 @@ static double upper_bound_etamass_EE = 0.62;
 
 static float fitRange_low_pi0 = 0.08; // value used in the fit function to define the fit range
 static float fitRange_high_pi0 = 0.21; // value used in the fit function to define the fit range
+static float fitRange_high_pi0_ext = 0.222;
+
+static float fitRange_low_eta = 0.4; // value used in the fit function to define the fit range
+static float fitRange_high_eta = 0.65; // value used in the fit function to define the fit range
+static float fitRange_high_eta_ext = 0.67;
 
 static float EoverEtrue_integralMin = 25; // require that integral in a given range is > EoverEtrue_integralMin for E/Etrue distribution (used for MC only)
 
@@ -1563,7 +1568,10 @@ void FitEpsilonPlot::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
 
 		if(integral>60.) {
 
-		  Pi0FitResult fitres = FitMassPeakRooFit( histoToFit, Are_pi0_? fitRange_low_pi0:0.4, Are_pi0_? fitRange_high_pi0:0.65, j, 1, Pi0EB, 0, isNot_2010_); //0.05-0.3
+		  Pi0FitResult fitres = FitMassPeakRooFit( histoToFit, 
+							   Are_pi0_? fitRange_low_pi0:fitRange_low_eta, 
+							   Are_pi0_? fitRange_high_pi0:fitRange_high_eta, 
+							   j, 1, Pi0EB, 0, isNot_2010_); //0.05-0.3
 		  RooRealVar* mean_fitresult = (RooRealVar*)(((fitres.res)->floatParsFinal()).find("mean"));
 		  mean = mean_fitresult->getVal();
 
@@ -1727,7 +1735,10 @@ void FitEpsilonPlot::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
 
 		if(integral>70.)
 		  {
-		    Pi0FitResult fitres = FitMassPeakRooFit( epsilon_EE_h[jR], Are_pi0_? fitRange_low_pi0:0.4, Are_pi0_? fitRange_high_pi0:0.65, jR, 1, Pi0EE, 0, isNot_2010_);//0.05-0.3
+		    Pi0FitResult fitres = FitMassPeakRooFit( epsilon_EE_h[jR], 
+							     Are_pi0_? fitRange_low_pi0:fitRange_low_eta, 
+							     Are_pi0_? fitRange_high_pi0:fitRange_high_eta, 
+							     jR, 1, Pi0EE, 0, isNot_2010_);//0.05-0.3
 		    RooRealVar* mean_fitresult = (RooRealVar*)(((fitres.res)->floatParsFinal()).find("mean"));
 		    mean = mean_fitresult->getVal();
 		    float r2 = mean/(Are_pi0_? PI0MASS:ETAMASS);
@@ -1828,21 +1839,64 @@ Pi0FitResult FitEpsilonPlot::FitMassPeakRooFit(TH1F* h, double xlo, double xhi, 
     canvas->SetRightMargin(0.06);
     canvas->SetLeftMargin(0.15);
 
+    Double_t upMassBoundaryEB = Are_pi0_? upper_bound_pi0mass_EB:upper_bound_etamass_EB; 
+    Double_t upMassBoundaryEE = Are_pi0_? upper_bound_pi0mass_EB:upper_bound_etamass_EE; 
+    Double_t upMassBoundary = (mode==Pi0EB) ? upMassBoundaryEB : upMassBoundaryEE;
+    // need a patch for some crystals in EB that might have the peak around 160 MeV due to high laser corrections.
+    // depending on the year, the containment corrections might also increase a bit the peak position
+    // the problem is that the peak is expected to be below 150 MeV when defining the signal model, so we have to catch these exception
+    Double_t xValMaxHisto = h->GetXaxis()->GetBinCenter(h->GetMaximumBin()+1); // use value just above maximum, it will be used to set the mean of the gaussian
+    // check the maximum is within xlo and xhi (the histogram range is larger than the fit range)
+    Double_t maxMassForGaussianMean = 0.0; //upper_bound_pi0mass_EB;
+    // first check if peak is in the fit range (for EB it will be, in EE the background rises up and the maximum might not coincide wth peak)
+    if (xValMaxHisto < xhi) {
+
+      if (xValMaxHisto > upMassBoundary) {
+	maxMassForGaussianMean = xValMaxHisto;
+	xhi = Are_pi0_? fitRange_high_pi0_ext : fitRange_high_eta_ext;      //xhi + 0.012; // increase a bit the fit range
+      } else {
+	maxMassForGaussianMean = upMassBoundary;
+      }
+
+    } else {
+
+      // need to loop on bins in the fit window
+      Double_t ymaxHisto = 0.0;
+      Int_t binYmaxHisto = -1;
+      for (Int_t ibin = h->GetXaxis()->FindFixBin(xlo); ibin <= h->GetXaxis()->FindFixBin(xhi); ibin++) {
+	if (h->GetBinContent(ibin) > ymaxHisto) {
+	  ymaxHisto = h->GetBinContent(ibin);
+	  binYmaxHisto = ibin;
+	}
+      }
+      // check if maximum was found and it was not the last-1 bin
+      // in that case, use the next bin to get max value for mass, just to avoid biases (that's why we asked last-1)
+      if (binYmaxHisto > 0 && binYmaxHisto < (h->GetXaxis()->FindFixBin(xhi)-1)) {
+	maxMassForGaussianMean = h->GetXaxis()->GetBinCenter(binYmaxHisto+1);
+	if (maxMassForGaussianMean > upMassBoundary) xhi = Are_pi0_? fitRange_high_pi0_ext : fitRange_high_eta_ext;  //xhi + 0.012; // increase a bit the fit range
+
+      } else {
+	maxMassForGaussianMean = upMassBoundary; // if all this mess didn't work, just use the value we would have used in the beginning
+      }
+
+    }
+    
     RooRealVar x("x","#gamma#gamma invariant mass",xlo, xhi, "GeV/c^2");
 
     RooDataHist dh("dh","#gamma#gamma invariant mass",RooArgList(x),h);
 
-    RooRealVar mean("mean","#pi^{0} peak position", Are_pi0_? 0.13:0.52,  Are_pi0_? 0.105:0.5, Are_pi0_? upper_bound_pi0mass_EB:upper_bound_etamass_EB,"GeV/c^{2}");
+    //RooRealVar mean("mean","#pi^{0} peak position", Are_pi0_? 0.13:0.52,  Are_pi0_? 0.105:0.5, Are_pi0_? upper_bound_pi0mass_EB:upper_bound_etamass_EB,"GeV/c^{2}");
+    RooRealVar mean("mean","#pi^{0} peak position", Are_pi0_? 0.13:0.52,  Are_pi0_? 0.105:0.5, maxMassForGaussianMean,"GeV/c^{2}");
     RooRealVar sigma("sigma","#pi^{0} core #sigma",0.011, 0.005,0.015,"GeV/c^{2}");
 
 
     if(mode==Pi0EE)  {
-	  mean.setRange( Are_pi0_? 0.1:0.45, Are_pi0_? upper_bound_pi0mass_EE:upper_bound_etamass_EE);
+	  mean.setRange( Are_pi0_? 0.1:0.45, maxMassForGaussianMean);
 	  mean.setVal(Are_pi0_? 0.13:0.55);
 	  sigma.setRange(0.005, 0.020);
     }
     if(mode==Pi0EB && niter==1){
-	  mean.setRange(Are_pi0_? 0.105:0.47, Are_pi0_? upper_bound_pi0mass_EB:upper_bound_etamass_EB);
+	  mean.setRange(Are_pi0_? 0.105:0.47, maxMassForGaussianMean);
 	  sigma.setRange(0.003, 0.030);
     }
 
@@ -2090,12 +2144,12 @@ Pi0FitResult FitEpsilonPlot::FitMassPeakRooFit(TH1F* h, double xlo, double xhi, 
     //if(mode==Pi0EB && ( xframe->chiSquare()/pi0res.dof>0.35 || pi0res.SoB<0.6 || fabs(mean.getVal()-(Are_pi0_? 0.150:0.62))<0.0000001 ) ){
     //bool badChi2 = fabs(xframe->chiSquare() - pi0res.dof) > 5.0 * sqrt(2. * pi0res.dof);
 
-    if(mode==Pi0EB && ( fabs(mean.getVal()-(Are_pi0_? upper_bound_pi0mass_EB:upper_bound_etamass_EB))<0.0000001 ) ){
+    if(mode==Pi0EB && ( fabs(mean.getVal()-maxMassForGaussianMean)<0.0000001 ) ){
 	  if(niter==0) fitres = FitMassPeakRooFit( h, xlo, xhi, HistoIndex, ngaus, mode, 1, isNot_2010_);
 	  if(niter==1) fitres = FitMassPeakRooFit( h, xlo, xhi, HistoIndex, ngaus, mode, 2, isNot_2010_);
 	  if(niter==2) fitres = FitMassPeakRooFit( h, xlo, xhi, HistoIndex, ngaus, mode, 3, isNot_2010_);
     }
-    if(mode==Pi0EE && ( fabs(mean.getVal()-(Are_pi0_? upper_bound_pi0mass_EE:upper_bound_etamass_EE))<0.0000001 ) ){
+    if(mode==Pi0EE && ( fabs(mean.getVal()-maxMassForGaussianMean)<0.0000001 ) ){
 	  if(niter==0) fitres = FitMassPeakRooFit( h, xlo, xhi, HistoIndex, ngaus, mode, 1, isNot_2010_);
 	  if(niter==1) fitres = FitMassPeakRooFit( h, xlo, xhi, HistoIndex, ngaus, mode, 2, isNot_2010_);
 	  if(niter==2) fitres = FitMassPeakRooFit( h, xlo, xhi, HistoIndex, ngaus, mode, 3, isNot_2010_);
