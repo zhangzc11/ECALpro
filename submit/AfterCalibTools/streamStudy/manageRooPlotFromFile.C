@@ -267,6 +267,8 @@ void drawRooPlotFromFile(const string& inputDir = "",
   
   canvas->SaveAs((inputDir + canvasname + ".pdf").c_str());
   canvas->SaveAs((inputDir + canvasname + ".png").c_str());
+  canvas->SaveAs((inputDir + canvasname + ".root").c_str());
+  canvas->SaveAs((inputDir + canvasname + ".C").c_str());
 
   TFile* outputFile = new TFile((inputDir + canvasname + ".root").c_str(),"RECREATE");
   if (!outputFile || outputFile->IsZombie()) {
