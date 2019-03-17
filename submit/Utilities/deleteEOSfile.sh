@@ -8,8 +8,8 @@ if [[ ${host} != *"lxplus"* ]]; then
     return 0
 fi
 
-iter_ini=2
-iter_fin=2  # it is included in sequence below                                                                           
+iter_ini=4
+iter_fin=4  # it is included in sequence below                                                                           
 
 eosPath="/eos/cms/store/group/dpg_ecal/alca_ecalcalib/piZero_Run2/mciprian/"
 dirName="AlCaP0_AllRun2017_condor_fixEBm16"
