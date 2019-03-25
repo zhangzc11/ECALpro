@@ -26,15 +26,36 @@
 #include "CondFormats/EcalObjects/interface/EcalChannelStatus.h"
 #include "CondFormats/DataRecord/interface/EcalChannelStatusRcd.h"
 #include "CalibCode/FillEpsilonPlot/interface/JSON.h"
+// to get L1 info
+#include "DataFormats/L1TGlobal/interface/GlobalAlgBlk.h" // included to get L1 info
+//L1                                                                                                                                         
+#include "L1Trigger/GlobalTriggerAnalyzer/interface/L1GtUtils.h"
 
 #define NPI0MAX 30000
-#define NL1SEED 128
+#define NL1SEED GlobalAlgBlk::maxPhysicsTriggers  // was 128
 //#define SELECTION_TREE
-//#define NEW_CONTCORR
-#define MVA_REGRESSIO
-//#define MVA_REGRESSIO_Tree
-//#define MVA_REGRESSIO_EE
-//#define MVA_REGRESSIO_EE_Tree
+//#define NEW_CONTCORR    // to use Yong's parametric CC, act on both EE and EB
+#define MVA_REGRESSIO     // to use regression in EB
+//#define MVA_REGRESSIO_Tree  // when using regression (defined MVA_REGRESSIO), decide to store some variables in a tree. This is for EB
+//#define MVA_REGRESSIO_EE    // should be as MVA_REGRESSIO but actually it also act as MVA_REGRESSIO_Tree for EE (define it to use regression in EE)
+//#define MVA_REGRESSIO_EE_Tree  // not used anywere apparently
+
+// developing new feature to have Yong's parametric containment corrections in EE and MVA regression in EB
+//
+// We would use regression in 2012 (or 2016) for EB and parametric containment corrections in EE
+// To do it, you can uncomment the following directive and also uncomment MVA_REGRESSIO while keeping NEW_CONTCORR commented
+// the temporary implementation of this solution is done so that REGRESS_AND_PARAM_CONTCORR substitutes MVA_REGRESSIO and NEW_CONTCORR, but it is not harmful
+// to keep MVA_REGRESSIO uncommented
+
+//#define REGRESS_AND_PARAM_CONTCORR
+
+// then in parameters.py you'll have 
+//    if ContainmentCorrection == 'mixed':
+//       useEBContainmentCorrections = 'False'  // no parametric CC in EB
+//       useEEContainmentCorrections = 'True'   // parametric CC in EB
+//       useMVAContainmentCorrections = True    //  regression (eventually used only in EB)
+//       new_pi0ContainmentCorrections = False  // use new 2016 regression: True to use it, False to use old one (useMVAContainmentCorrections must be true anyway)
+
 
 //MVA Stuff
 #if not defined(__CINT__) || defined(__MAKECINT__)
@@ -44,6 +65,8 @@
 #endif
 #include "CalibCode/GBRTrain/interface/GBRApply.h"
 #include "CalibCode/EgammaObjects/interface/GBRForest.h"
+#include "CondFormats/EgammaObjects/interface/GBRForestD.h"
+
 //#include "Cintex/Cintex.h"
 
 enum calibGranularity{ xtal, tt, etaring };
@@ -103,13 +126,14 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       TH2F * EEpMap_DeadXtal;
       TH1F * EBPHI_ConCorr_p;
       TH1F * EBPHI_ConCorr_m;
-#if defined(NEW_CONTCORR) && !defined(MVA_REGRESSIO)
+#if (defined(NEW_CONTCORR) && !defined(MVA_REGRESSIO)) || defined(REGRESS_AND_PARAM_CONTCORR)
       EcalEnerCorr containmentCorrections_;
 #endif
       // ----------member data ---------------------------
       edm::Handle< EBRecHitCollection > ebHandle;
       edm::Handle< EBRecHitCollection > eeHandle;
       edm::Handle< ESRecHitCollection > esHandle;
+      // edm::Handle< edm::SortedCollection<EcalRecHit,edm::StrictWeakOrdering<EcalRecHit> > > esHandle;
 
       const EcalPreshowerGeometry *esGeometry_;     
       const CaloGeometry* geometry;
@@ -144,20 +168,27 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       bool RemoveDead_Flag_;
       TString RemoveDead_Map_;
       TString L1_Bit_Sele_;
-      float L1BitCollection_[NL1SEED];
+      //float L1BitCollection_[NL1SEED];
 
       bool Are_pi0_;
+      bool useMVAContainmentCorrections_;
+      bool new_pi0ContainmentCorrections_;
+
       bool L1TriggerInfo_;
-      edm::InputTag EBRecHitCollectionTag_;
-      edm::InputTag EERecHitCollectionTag_;
-      edm::InputTag ESRecHitCollectionTag_;
+      edm::EDGetTokenT<EBRecHitCollection> EBRecHitCollectionToken_;
+      edm::EDGetTokenT<EERecHitCollection> EERecHitCollectionToken_;
+      edm::EDGetTokenT<ESRecHitCollection> ESRecHitCollectionToken_;
       edm::InputTag l1TriggerTag_;
-      edm::InputTag triggerTag_;
-      edm::InputTag hltL1GtObjectMap_;
+      edm::EDGetTokenT<edm::TriggerResults> triggerResultsToken_;
+      //edm::EDGetTokenT<L1GlobalTriggerObjectMapRecord> L1GTobjmapToken_;
+      edm::EDGetTokenT<GlobalAlgBlkBxCollection> L1GTobjmapToken_;
       edm::InputTag l1InputTag_;
-      std::map<string,int> L1_nameAndNumb;
-      edm::InputTag GenPartCollectionTag_;
-      
+      //std::map<string,int> L1_nameAndNumb;
+      edm::EDGetTokenT<GenParticleCollection> GenPartCollectionToken_;
+
+      edm::EDGetTokenT<edm::SimTrackContainer>  g4_simTk_Token_;
+      edm::EDGetTokenT<edm::SimVertexContainer> g4_simVtx_Token_;      
+
       PosCalcParams PCparams_;
       //const double preshowerStartEta_ =  1.653;
 
@@ -200,7 +231,7 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       math::XYZPoint Gamma2MC;
       bool isCRAB_;
       bool MakeNtuple4optimization_;
-
+      bool isDebug_; 
       /// all the three options have to be instantiated to allow the
       //choice at runtime
       EcalRegionalCalibration<EcalCalibType::Xtal> xtalCalib;
@@ -220,6 +251,8 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
 
       TH1F *EventFlow_EB;
       TH1F *EventFlow_EE;
+      TH1F *EventFlow_EB_debug;
+      TH1F *EventFlow_EE_debug;
       TH1F **epsilon_EB_h;  // epsilon distribution by region
       TH1F **epsilon_EE_h;  // epsilon distribution in EE
       TH1F *allEpsilon_EE; 
@@ -257,23 +290,40 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       TTree *CutVariables_EE;
 
       Float_t PtPi0_EB, mpi0_EB, Etapi0_EB, Phipi0_EB, Epsilon_EB;
+      //adding these variables
+      Float_t PtGamma1_EB, PtGamma2_EB, EtaGamma1_EB, EtaGamma2_EB, NxtalGamma1_EB, NxtalGamma2_EB, S4S9Gamma1_EB, S4S9Gamma2_EB;
       void Fill_PtPi0_EB(float pt){ PtPi0_EB=pt; };
       void Fill_mpi0_EB(float m){ mpi0_EB=m; };
       void Fill_etapi0_EB( float eta){ Etapi0_EB =eta; };
       void Fill_phipi0_EB( float phi){ Phipi0_EB =phi; };
+      //adding these method to fill variables
+      void Fill_PtGamma_EB(float pt1, float pt2){ PtGamma1_EB = pt1; PtGamma2_EB = pt2;};
+      void Fill_EtaGamma_EB(float eta1, float eta2){ EtaGamma1_EB = eta1; EtaGamma2_EB = eta2;};
+      void Fill_NcrystalUsedGamma_EB(float Nxtal1, float Nxtal2) { NxtalGamma1_EB = Nxtal1 ; NxtalGamma2_EB = Nxtal2;};
+      void Fill_S4S9Gamma_EB(float s4s9g1, float s4s9g2) { S4S9Gamma1_EB = s4s9g1; S4S9Gamma2_EB = s4s9g2;};
+      //
       void Fill_Epsilon_EB(float eps ){ Epsilon_EB=eps; };
       TTree *Pi0Info_EB;
+
       Float_t PtPi0_EE, mpi0_EE,Etapi0_EE, Phipi0_EE, Epsilon_EE;
+      //adding these variables
+      Float_t PtGamma1_EE, PtGamma2_EE, EtaGamma1_EE, EtaGamma2_EE, NxtalGamma1_EE, NxtalGamma2_EE, S4S9Gamma1_EE, S4S9Gamma2_EE;
       void Fill_PtPi0_EE(float pt){ PtPi0_EE=pt; };
       void Fill_mpi0_EE(float m){ mpi0_EE=m; };
       void Fill_etapi0_EE( float eta){ Etapi0_EE =eta; };
       void Fill_phipi0_EE( float phi){ Phipi0_EE =phi; };
+      //adding these methods to fill variables
+      void Fill_PtGamma_EE(float pt1, float pt2){ PtGamma1_EE = pt1; PtGamma2_EE = pt2;};
+      void Fill_EtaGamma_EE(float eta1, float eta2){ EtaGamma1_EE = eta1; EtaGamma2_EE = eta2;};
+      void Fill_NcrystalUsedGamma_EE(float Nxtal1, float Nxtal2) { NxtalGamma1_EE = Nxtal1 ; NxtalGamma2_EE = Nxtal2;};
+      void Fill_S4S9Gamma_EE(float s4s9g1, float s4s9g2) { S4S9Gamma1_EE = s4s9g1; S4S9Gamma2_EE = s4s9g2;};
+      //
       void Fill_Epsilon_EE(float eps ){ Epsilon_EE=eps; };
       TTree *Pi0Info_EE;
 #endif
       TTree*  Tree_Optim;
       Int_t   nPi0;
-      Int_t   Op_L1Seed[NL1SEED];
+      //Int_t   Op_L1Seed[NL1SEED];
       Int_t   Op_NPi0_rec;
       Int_t   Op_Pi0recIsEB[NPI0MAX];
       Float_t Op_IsoPi0_rec[NPI0MAX];
@@ -329,7 +379,9 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       vector<float> Es_2;
 
       std::string ContCorr_EB_;
-      TH1F *triggerComposition;
+      TH1F *triggerComposition;      
+      TH1F *triggerComposition_EB; // require that HLT in EB fired
+      TH1F *triggerComposition_EE; // require that HLT in EE fired
       bool areLabelsSet_;
 
       std::map< std::string, int > l1TrigNames_;
@@ -340,7 +392,9 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       TFile *EBweight_file_1;
       TFile *EBweight_file_2;
       const GBRForest *forest_EB_1;
+      const GBRForestD *forestD_EB_1;
       const GBRForest *forest_EB_2;
+      const GBRForestD *forestD_EB_2;
       GBRApply *gbrapply;
 #if defined(MVA_REGRESSIO_Tree) && defined(MVA_REGRESSIO)
       TTree *TTree_JoshMva;
@@ -366,7 +420,10 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       TFile *EEweight_file_pi01;
       TFile *EEweight_file_pi02;
       const GBRForest *forest_EE_pi01;
+      const GBRForestD *forestD_EE_pi01;
       const GBRForest *forest_EE_pi02;
+      const GBRForestD *forestD_EE_pi02;
+
       TTree *TTree_JoshMva_EE;
       Float_t Correction1EE_mva, Correction2EE_mva, Pt1EE_mva, Pt2EE_mva, MassEE_mva, MassEEOr_mva;
       Int_t   iX1_mva, iY1_mva, iX2_mva, iY2_mva, EtaRing1_mva, EtaRing2_mva;
@@ -382,4 +439,27 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       //bool FailPreselEB;
       //bool FailPreselEE;
       //std::map<int,bool>  PassPreselection;
+      
+      //Containment correction
+      /*constexpr*/ double meanlimlow  = 0.2;
+      /*constexpri*/ double meanlimhigh = 2.0;
+      /*constexpr*/ double meanoffset  = meanlimlow + 0.5*(meanlimhigh-meanlimlow);
+      /*constexpr*/ double meanscale   = 0.5*(meanlimhigh-meanlimlow);
+
+      // for L1
+      short *l1flag;
+      TString* algoBitToName;
+      std::string L1SeedsPi0Stream_;
+      int nL1SeedsPi0Stream_; // number of seeds used by the stream (given L1SeedsPi0Stream_, it is the number of " OR " +1, e.g. "seed1 OR seed2 OR seed3" has 3 seeds
+      int *seedIsInStream;
+
+      // store for each event if AlCa_EcalPi0(Eta)EB(EE)only_v* fired
+      bool EB_HLT, EE_HLT;
+
+      // event info
+      ULong64_t myEvent;
+      int myLumiBlock;
+      int myRun;
+      int myBunchCrossing;
+
 };
