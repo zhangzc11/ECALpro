@@ -111,7 +111,7 @@ void calibAnaEcal::setHistograms() {
 
 void calibAnaEcal::draw2Dmap(TH2D* hist2d) {
 
-  gStyle->SetPalette(107, 0);  // 1:raibow palette  ; 107: kVisibleSpectrum
+  gStyle->SetPalette(55, 0);  // 55:raibow palette  ; 57: kBird (from blue to yellow) ; 107: kVisibleSpectrum
   gStyle->SetNumberContours(50); // default is 20
 
   string canvasName(hist2d->GetName());
@@ -163,6 +163,9 @@ void calibAnaEcal::drawProfile(TProfile *profile, const string& yAxisName) {
   string canvasName(profile->GetName());
   canvasName = "c_" + canvasName;
   TCanvas *c = new TCanvas(canvasName.c_str(),canvasName.c_str());
+  c->SetTickx(1);
+  c->SetTicky(1);
+  c->SetGrid();
   string name = wwwPath + profile->GetName() + "_" + EBorEE;  // name  (with path) of file to save canvas: EBorEE can be "EB" or "EEp" or "EEm" 
 
   profile->Draw("HE");
@@ -188,7 +191,7 @@ void calibAnaEcal::drawProfile(TProfile *profile, const string& yAxisName) {
 
 void calibAnaEcal::drawChisquare(TH2D* hist2d = NULL, const Bool_t drawProfileX = true) {
   
-  gStyle->SetPalette(57, 0);  // 1:raibow palette  ; 57: kBird (blue to yellow, default one) ; 107: kVisibleSpectrum
+  gStyle->SetPalette(57, 0);  // 55:raibow palette  ; 57: kBird (blue to yellow, default one) ; 107: kVisibleSpectrum
   gStyle->SetNumberContours(50); // default is 20
   gStyle->SetOptStat(1000111110);
 

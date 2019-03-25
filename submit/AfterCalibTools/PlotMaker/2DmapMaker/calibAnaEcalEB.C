@@ -70,7 +70,15 @@ void calibAnaEcalEB::setHistograms() {
   th2dMinZaxisVector.push_back(0.0005);//0.0                                                                 
   if (Pi0orEta == "Pi0") {
     if (this->getIterNumber() == "iter_0" && this->getDirName().find("_ext") == string::npos) th2dMinZaxisVector.push_back(0.130);
-    else                            th2dMinZaxisVector.push_back(0.130);
+    else {
+      string match = "iter_";
+      string iterN_str = this->getIterNumber().substr(this->getIterNumber().find(match) + match.size());
+      Int_t iterN_int = atoi(iterN_str.c_str());
+      if (iterN_int > 2 || this->getDirName().find("_ext") != string::npos) 
+	th2dMinZaxisVector.push_back(0.134);
+      else 
+	th2dMinZaxisVector.push_back(0.130);
+    }
     th2dMinZaxisVector.push_back(0.005);
   } else {
     th2dMinZaxisVector.push_back(0.500);
@@ -88,10 +96,18 @@ void calibAnaEcalEB::set2DmapMaxZaxisVector() {
   th2dMaxZaxisVector.push_back(hBackground->GetBinContent(hBackground->GetMaximumBin()));
   th2dMaxZaxisVector.push_back(10e9);
   th2dMaxZaxisVector.push_back(10e9); // when this value is very large (bigger than the default) use the default to plot axis                  
-  th2dMaxZaxisVector.push_back(0.0125);//0.02                                                  
+  th2dMaxZaxisVector.push_back(0.005);//0.02                                                  
   if (Pi0orEta == "Pi0") {
-    if (this->getIterNumber() == "iter_0" && this->getDirName().find("_ext") == string::npos) th2dMaxZaxisVector.push_back(0.140);
-    else                            th2dMaxZaxisVector.push_back(0.140);
+    if (this->getIterNumber() == "iter_0" && this->getDirName().find("_ext") == string::npos) th2dMaxZaxisVector.push_back(0.150);
+    else {
+      string match = "iter_";
+      string iterN_str = this->getIterNumber().substr(this->getIterNumber().find(match) + match.size());
+      Int_t iterN_int = atoi(iterN_str.c_str());
+      if (iterN_int > 2 || this->getDirName().find("_ext") != string::npos) 
+	th2dMaxZaxisVector.push_back(0.136);
+      else 
+	th2dMaxZaxisVector.push_back(0.140);
+    }
     th2dMaxZaxisVector.push_back(0.015);
   } else {
     th2dMaxZaxisVector.push_back(0.600);
@@ -123,14 +139,14 @@ void calibAnaEcalEB::Init(TTree* tree) {
 
   calibAnaEcal::Init(tree);
 
-  fChain->SetBranchAddress("rawId", &rawId, &b_rawId);                                                                                                             
-  fChain->SetBranchAddress("ieta", &ieta, &b_ieta);                                                                                                                
-  fChain->SetBranchAddress("iphi", &iphi, &b_iphi);                                                                                                                
-  fChain->SetBranchAddress("iSM", &iSM, &b_iSM);                                                                                                                   
-  fChain->SetBranchAddress("iMod", &iMod, &b_iMod);                                                                                                                
-  fChain->SetBranchAddress("iTT", &iTT, &b_iTT);                                                                                                                   
-  fChain->SetBranchAddress("iTTeta", &iTTeta, &b_iTTeta);                                                                                                          
-  fChain->SetBranchAddress("iTTphi", &iTTphi, &b_iTTphi);                                                                                                          
+  fChain->SetBranchAddress("rawId_", &rawId, &b_rawId);                                                                                                             
+  fChain->SetBranchAddress("ieta_", &ieta, &b_ieta);                                                                                                                
+  fChain->SetBranchAddress("iphi_", &iphi, &b_iphi);                                                                                                                
+  fChain->SetBranchAddress("iSM_", &iSM, &b_iSM);                                                                                                                   
+  fChain->SetBranchAddress("iMod_", &iMod, &b_iMod);                                                                                                                
+  fChain->SetBranchAddress("iTT_", &iTT, &b_iTT);                                                                                                                   
+  fChain->SetBranchAddress("iTTeta_", &iTTeta, &b_iTTeta);                                                                                                          
+  fChain->SetBranchAddress("iTTphi_", &iTTphi, &b_iTTphi);                                                                                                          
   Notify();    
 
 }
@@ -202,6 +218,9 @@ void calibAnaEcalEB::Loop()
   }
 
   TCanvas *c_mean_iphi_prof = new TCanvas("c_mean_iphi_prof",("c_" + string(mean_iphiProfile->GetName())).c_str());
+  c_mean_iphi_prof->SetTickx(1);
+  c_mean_iphi_prof->SetTicky(1);
+  c_mean_iphi_prof->SetGrid();
   mean_iphiProfile->Draw("HE");
   mean_iphiProfile->GetXaxis()->SetTitle("i #phi");
   mean_iphiProfile->GetXaxis()->SetTitleSize(0.06);
@@ -209,7 +228,15 @@ void calibAnaEcalEB::Loop()
   mean_iphiProfile->GetYaxis()->SetTitle("mean [GeV]");
   if (Pi0orEta == "Pi0") {
     if (this->getIterNumber() == "iter_0" && this->getDirName().find("_ext") == string::npos) mean_iphiProfile->GetYaxis()->SetRangeUser(0.13,0.14);
-    else                                   mean_iphiProfile->GetYaxis()->SetRangeUser(0.13,0.14);
+    else {
+      string match = "iter_";
+      string iterN_str = this->getIterNumber().substr(this->getIterNumber().find(match) + match.size());
+      Int_t iterN_int = atoi(iterN_str.c_str());
+      if (iterN_int > 2 || this->getDirName().find("_ext") != string::npos) 
+	mean_iphiProfile->GetYaxis()->SetRangeUser(0.134,0.136);
+      else 
+	mean_iphiProfile->GetYaxis()->SetRangeUser(0.13,0.14);
+    }
   } else mean_iphiProfile->GetYaxis()->SetRangeUser(0.5,0.6);
   mean_iphiProfile->GetYaxis()->SetTitleSize(0.055);
   mean_iphiProfile->GetYaxis()->SetTitleOffset(0.8);

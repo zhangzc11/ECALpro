@@ -8,6 +8,7 @@
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
+#include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
@@ -34,6 +35,19 @@
 #define NPI0MAX 30000
 #define NL1SEED GlobalAlgBlk::maxPhysicsTriggers  // was 128
 //#define SELECTION_TREE
+
+//=====================================
+// NOTES ON CONTAINMENT CORRECTIONS, PLEASE READ!
+//=====================================
+// 19/01/2018
+//
+// we developed containment corrections for both photons based on E/Etrue in MC
+// to have them working, you must set ContainmentCorrection == 'EoverEtrue' in parameters.py
+// this will enable useContainmentCorrectionsFromEoverEtrue = True and set the name of the file where the correction maps are stored (they are TH2F)
+// In principle these corrections are available for both EB and EE, but the MC statistics was limited, so we folded all the EB supermodules in one, while
+// for EE at the moment it is better not to use any corrections (which is what we have always been doing so far)
+// Its is better to undefine MVA_REGRESSIO below. It could stay defined because that correction is not applied, yet it is computed and this waste CPU time
+
 //#define NEW_CONTCORR    // to use Yong's parametric CC, act on both EE and EB
 #define MVA_REGRESSIO     // to use regression in EB
 //#define MVA_REGRESSIO_Tree  // when using regression (defined MVA_REGRESSIO), decide to store some variables in a tree. This is for EB
@@ -103,19 +117,22 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       // ---------- user defined ------------------------
       void fillEBClusters(std::vector< CaloCluster > & ebclusters, const edm::Event& iEvent, const EcalChannelStatus &channelStatus);
       void fillEEClusters(std::vector< CaloCluster > & eseeclusters,std::vector< CaloCluster > & eseeclusters_tot, const edm::Event& iEvent, const EcalChannelStatus &channelStatus);
-      std::vector< CaloCluster > MCTruthAssociate(std::vector< CaloCluster > & clusters, double deltaR, bool isEB);
-      void computeEpsilon(std::vector< CaloCluster > & clusters, int subDetId);
+      //std::vector< CaloCluster > MCTruthAssociate(std::vector< CaloCluster > & clusters, double deltaR, bool isEB);
+      std::vector< CaloCluster > MCTruthAssociateMultiPi0(std::vector< CaloCluster > & clusters, int& retNumberUnmergedGen, int& retNumberMatchedGen, std::vector<TLorentzVector*>& retClusters_matchedGenPhotonEnergy, const double deltaR, const bool isEB);
+      void computeEpsilon(std::vector< CaloCluster > & clusters, std::vector<TLorentzVector*>& clusters_matchedGenPhoton, int subDetId);
+      void computeEoverEtrue(std::vector< CaloCluster > & clusters, std::vector<TLorentzVector*>& clusters_matchedGenPhoton, int subDetId);
       bool checkStatusOfEcalRecHit(const EcalChannelStatus &channelStatus,const EcalRecHit &rh);
       bool isInDeadMap( bool isEB, const EcalRecHit &rh );
       float GetDeltaR(float eta1, float eta2, float phi1, float phi2);
       float DeltaPhi(float phi1, float phi2);
       double min( double a, double b);
+      int getNumberOverlappingCrystals(std::vector<CaloCluster>::const_iterator g1, std::vector<CaloCluster>::const_iterator g2, const bool isEB);
 
       TH1F** initializeEpsilonHistograms(const char *name, const char *title, int size );
       void deleteEpsilonPlot(TH1F **h, int size);
       void writeEpsilonPlot(TH1F **h, const char *folder, int size);
       bool getTriggerResult(const edm::Event& iEvent, const edm::EventSetup& iSetup);
-      bool getTriggerByName( std::string s );
+      //bool getTriggerByName( std::string s ); not used anymore
       bool GetHLTResults(const edm::Event& iEvent, std::string s);
 
       float EBPHI_Cont_Corr(float PT, int giPhi, int ieta);
@@ -126,6 +143,13 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       TH2F * EEpMap_DeadXtal;
       TH1F * EBPHI_ConCorr_p;
       TH1F * EBPHI_ConCorr_m;
+
+      // for containment corrections based on E/Etrue in MC
+      TH2F* hCC_EoverEtrue_g1 = nullptr;
+      TH2F* hCC_EoverEtrue_g2 = nullptr;
+      void loadEoverEtrueContainmentCorrections(const string& fileName);
+      CaloCluster getClusterAfterContainmentCorrections(std::vector<CaloCluster>::const_iterator, const bool isSecondPhoton, const bool isEB);
+
 #if (defined(NEW_CONTCORR) && !defined(MVA_REGRESSIO)) || defined(REGRESS_AND_PARAM_CONTCORR)
       EcalEnerCorr containmentCorrections_;
 #endif
@@ -143,6 +167,7 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       std::string externalGeometry_;
       std::string calibMapPath_; 
       std::string jsonFile_; 
+      std::string fileEoverEtrueContainmentCorrections_;
       std::string ebContainmentCorrections_;
       std::string MVAEBContainmentCorrections_01_;
       std::string MVAEBContainmentCorrections_02_;
@@ -159,6 +184,7 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       std::string ebPHIContainmentCorrections_;
       std::string eeContainmentCorrections_;
       std::string Barrel_orEndcap_;
+      bool useContainmentCorrectionsFromEoverEtrue_;
       bool useEBContainmentCorrections_;
       bool useEEContainmentCorrections_;
       bool useOnlyEEClusterMatchedWithES_;
@@ -167,6 +193,7 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       std::string HLTResultsNameEE_;
       bool RemoveDead_Flag_;
       TString RemoveDead_Map_;
+      bool RemoveSeedsCloseToDeadXtal_;
       TString L1_Bit_Sele_;
       //float L1BitCollection_[NL1SEED];
 
@@ -180,11 +207,12 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       edm::EDGetTokenT<ESRecHitCollection> ESRecHitCollectionToken_;
       edm::InputTag l1TriggerTag_;
       edm::EDGetTokenT<edm::TriggerResults> triggerResultsToken_;
-      //edm::EDGetTokenT<L1GlobalTriggerObjectMapRecord> L1GTobjmapToken_;
       edm::EDGetTokenT<GlobalAlgBlkBxCollection> L1GTobjmapToken_;
       edm::InputTag l1InputTag_;
       //std::map<string,int> L1_nameAndNumb;
       edm::EDGetTokenT<GenParticleCollection> GenPartCollectionToken_;
+      edm::EDGetTokenT< std::vector<PileupSummaryInfo> > pileupSummaryToken_;
+      edm::Handle<reco::GenParticleCollection> genParticles;
 
       edm::EDGetTokenT<edm::SimTrackContainer>  g4_simTk_Token_;
       edm::EDGetTokenT<edm::SimVertexContainer> g4_simVtx_Token_;      
@@ -224,21 +252,77 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       double S4S9_cut_low_[3];
       double S4S9_cut_high_[3];
       double SystOrNot_;
+
+      // MC stuff
       bool isMC_;
-      bool MC_Asssoc_;
-      double MC_Asssoc_DeltaR;
+      bool MC_Assoc_;
+      double MC_Assoc_DeltaR;
+      bool isEoverEtrue_;  // to run E/Etrue flow (with MC only)
       math::XYZPoint Gamma1MC;
       math::XYZPoint Gamma2MC;
+      // for MC truth with more pi0
+      // start with TLorentzVector, then I will optimize
+      /* vector<math::XYZPoint> vecGamma1MC; */
+      /* vector<math::XYZPoint> vecGamma2MC; */
+      /* vector<TLorentzVector> vecGamma1MC; */
+      /* vector<TLorentzVector> vecGamma2MC; */
+      vector<TLorentzVector> vecGamma1MC_EB;
+      vector<TLorentzVector> vecGamma2MC_EB;
+      vector<TLorentzVector> vecGamma1MC_EE;
+      vector<TLorentzVector> vecGamma2MC_EE;
+      std::vector< TLorentzVector* > ebclusters_matchedGenPhoton;  // will store the gen photon corresponding to a given reco cluster (ordered pairs with seed energy)   
+      std::vector< TLorentzVector* > eeclusters_matchedGenPhoton;  // will store the gen photon corresponding to a given reco cluster (ordered pairs with seed energy)
+      TH1F* h_numberUnmergedGenPhotonPairs_EB; // fraction of gen photon pairs that are not merged (i.e. the photons are separated by a DR defined in .cc)
+      TH1F* h_numberMatchedGenPhotonPairs_EB;  // fraction of gen photon pairs that are succesfully matched to reco clusters
+      TH1F* h_numberUnmergedGenPhotonPairs_EE; 
+      TH1F* h_numberMatchedGenPhotonPairs_EE;  
+      TH1F* h_numberUnmergedGenPhotonPairs; // absolute number without separating EB and EE 
+      TH1F* h_numberMatchedGenPhotonPairs;  
+      // for E/Etrue with MC
+      TH1F **EoverEtrue_g1_EB_h;  
+      TH1F **EoverEtrue_g1_EE_h;  
+      TH1F **EoverEtrue_g2_EB_h;  
+      TH1F **EoverEtrue_g2_EE_h;  
+      TH1F *allEoverEtrue_g1_EE; 
+      TH1F *allEoverEtrue_g1_EEnw; 
+      TH1F *allEoverEtrue_g1_EB;
+      TH1F *allEoverEtrue_g1_EBnw;
+      TH1F *allEoverEtrue_g2_EE; 
+      TH1F *allEoverEtrue_g2_EEnw; 
+      TH1F *allEoverEtrue_g2_EB;
+      TH1F *allEoverEtrue_g2_EBnw;
+
+      // Some kinematic variables (use option in parameters.py to choose whether to fill and save them)
+      bool fillKinematicVariables_;
+      int whichRegionEcalStreamPi0; // will be used to say in which region we are based on eta of pi0
+      std::vector<TH1F*> pi0pt_afterCuts;  // 4 regions (2 in EB and 2 in EE, there would be 3 in EE but last two are merged)
+      std::vector<TH1F*> g1pt_afterCuts;
+      std::vector<TH1F*> g2pt_afterCuts;
+      std::vector<TH1F*> g1Nxtal_afterCuts;
+      std::vector<TH1F*> g2Nxtal_afterCuts;
+      std::vector<TH1F*> pi0PhotonsNoverlappingXtals_afterCuts;
+      std::vector<TH2F*> pi0MassVsPU;  // BX 0
+      //std::vector<TH2F*> pi0MassVsPU_BXm1;
+      //std::vector<TH2F*> pi0MassVsPU_BXm2;
+      //std::vector<TH2F*> pi0MassVsPU_BXp1;
+
+      /////////
       bool isCRAB_;
       bool MakeNtuple4optimization_;
-      bool isDebug_; 
+      bool isDebug_;
       /// all the three options have to be instantiated to allow the
       //choice at runtime
       EcalRegionalCalibration<EcalCalibType::Xtal> xtalCalib;
       EcalRegionalCalibration<EcalCalibType::EtaRing> etaCalib;
       EcalRegionalCalibration<EcalCalibType::TrigTower> TTCalib;
+      EcalRegionalCalibrationBase *regionalCalibration_;  // use it for pi0 mass or first photon with E/overEtrue
 
-      EcalRegionalCalibrationBase *regionalCalibration_;
+      // for second photon with E/Etrue (MC only)
+      // I create them with "regionalCalibration_g2_ = new EcalRegionalCalibration<EcalCalibType::Xtal>()" directly in the source 
+      /* EcalRegionalCalibration<EcalCalibType::Xtal> xtalCalib_g2; */
+      /* EcalRegionalCalibration<EcalCalibType::EtaRing> etaCalib_g2; */
+      /* EcalRegionalCalibration<EcalCalibType::TrigTower> TTCalib_g2; */
+      EcalRegionalCalibrationBase *regionalCalibration_g2_; // use it for second gen photon with E/Etrue
 
       int currentIteration_;
       string outputDir_;
@@ -324,56 +408,112 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       TTree*  Tree_Optim;
       Int_t   nPi0;
       //Int_t   Op_L1Seed[NL1SEED];
-      Int_t   Op_NPi0_rec;
-      Int_t   Op_Pi0recIsEB[NPI0MAX];
-      Float_t Op_IsoPi0_rec[NPI0MAX];
-      Float_t Op_HLTIsoPi0_rec[NPI0MAX];
-      Int_t   Op_n1CrisPi0_rec[NPI0MAX];
-      Int_t   Op_n2CrisPi0_rec[NPI0MAX];
-      Float_t Op_mPi0_rec[NPI0MAX];
-      Float_t Op_enG1_rec[NPI0MAX];
-      Float_t Op_enG2_rec[NPI0MAX];
-      Float_t Op_etaPi0_rec[NPI0MAX];
-      Float_t Op_ptPi0_rec[NPI0MAX];
-      Float_t Op_DeltaRG1G2[NPI0MAX];
-      Float_t Op_Es_e1_1[NPI0MAX];
-      Float_t Op_Es_e1_2[NPI0MAX];
-      Float_t Op_Es_e2_1[NPI0MAX];
-      Float_t Op_Es_e2_2[NPI0MAX];
-      Float_t Op_S4S9_1[NPI0MAX];
-      Float_t Op_S4S9_2[NPI0MAX];
-      Float_t Op_S1S9_1[NPI0MAX];
-      Float_t Op_S1S9_2[NPI0MAX];
-      Float_t Op_S2S9_1[NPI0MAX];
-      Float_t Op_S2S9_2[NPI0MAX];
-      Float_t Op_Eta_1[NPI0MAX];
-      Float_t Op_Eta_2[NPI0MAX];
-      Float_t Op_Phi_1[NPI0MAX];
-      Float_t Op_Phi_2[NPI0MAX];
-      Float_t Op_Time_1[NPI0MAX];
-      Float_t Op_Time_2[NPI0MAX];
-      Float_t Op_DeltaR_1[NPI0MAX];
-      Float_t Op_DeltaR_2[NPI0MAX];
-      Float_t Op_enG1_nocor[NPI0MAX];
-      Float_t Op_enG2_nocor[NPI0MAX];
-      Float_t Op_ptPi0_nocor[NPI0MAX];
-      Float_t Op_mPi0_nocor[NPI0MAX];
-      Float_t Op_enG1_true[NPI0MAX];
-      Float_t Op_enG2_true[NPI0MAX];
-      Int_t Op_Nxtal_1[NPI0MAX];
-      Int_t Op_Nxtal_2[NPI0MAX];
-      Int_t Op_iEtaiX_1[NPI0MAX];
-      Int_t Op_iEtaiX_2[NPI0MAX];
-      Int_t Op_iPhiiY_1[NPI0MAX];
-      Int_t Op_iPhiiY_2[NPI0MAX];
-      Int_t Op_iEta_1on5[NPI0MAX];
-      Int_t Op_iEta_2on5[NPI0MAX];
-      Int_t Op_iPhi_1on2[NPI0MAX];
-      Int_t Op_iPhi_2on2[NPI0MAX];
-      Int_t Op_iEta_1on2520[NPI0MAX];
-      Int_t Op_iEta_2on2520[NPI0MAX];
-      Int_t Op_iPhi_1on20[NPI0MAX];
-      Int_t Op_iPhi_2on20[NPI0MAX];
+      Int_t   Op_NPi0;
+      std::vector<Int_t> Op_Pi0recIsEB;
+      std::vector<Float_t> Op_ClusIsoPi0;
+      std::vector<Float_t> Op_HLTIsoPi0;
+      std::vector<Int_t> Op_nCrisG1;
+      std::vector<Int_t> Op_nCrisG2;
+      std::vector<Float_t> Op_enG1_cor;
+      std::vector<Float_t> Op_enG2_cor;
+      std::vector<Float_t> Op_etaG1_cor;
+      std::vector<Float_t> Op_etaG2_cor;
+      std::vector<Float_t> Op_phiG1_cor;
+      std::vector<Float_t> Op_phiG2_cor;
+      std::vector<Float_t> Op_mPi0_cor;
+      std::vector<Float_t> Op_etaPi0_cor;
+      std::vector<Float_t> Op_ptPi0_cor;
+      std::vector<Float_t> Op_DeltaRG1G2;
+      std::vector<Float_t> Op_Es_e1_1;
+      std::vector<Float_t> Op_Es_e1_2;
+      std::vector<Float_t> Op_Es_e2_1;
+      std::vector<Float_t> Op_Es_e2_2;
+      std::vector<Float_t> Op_S4S9_1;
+      std::vector<Float_t> Op_S4S9_2;
+      std::vector<Float_t> Op_S1S9_1;
+      std::vector<Float_t> Op_S1S9_2;
+      std::vector<Float_t> Op_S2S9_1;
+      std::vector<Float_t> Op_S2S9_2;
+      std::vector<Float_t> Op_Time_1;
+      std::vector<Float_t> Op_Time_2;
+      std::vector<Float_t> Op_DeltaR_1;
+      std::vector<Float_t> Op_DeltaR_2;
+      std::vector<Float_t> Op_enG1_nocor;
+      std::vector<Float_t> Op_enG2_nocor;
+      std::vector<Float_t> Op_etaG1_nocor;
+      std::vector<Float_t> Op_etaG2_nocor;
+      std::vector<Float_t> Op_phiG1_nocor;
+      std::vector<Float_t> Op_phiG2_nocor;
+      std::vector<Float_t> Op_ptPi0_nocor;
+      std::vector<Float_t> Op_mPi0_nocor;
+      std::vector<Float_t> Op_enG1_true;
+      std::vector<Float_t> Op_enG2_true;
+      std::vector<Int_t> Op_iEtaiX_1;
+      std::vector<Int_t> Op_iEtaiX_2;
+      std::vector<Int_t> Op_iPhiiY_1;
+      std::vector<Int_t> Op_iPhiiY_2;
+      std::vector<Int_t> Op_iEta_1on5;
+      std::vector<Int_t> Op_iEta_2on5;
+      std::vector<Int_t> Op_iPhi_1on2;
+      std::vector<Int_t> Op_iPhi_2on2;
+      std::vector<Int_t> Op_iEta_1on2520;
+      std::vector<Int_t> Op_iEta_2on2520;
+      std::vector<Int_t> Op_iPhi_1on20;
+      std::vector<Int_t> Op_iPhi_2on20;
+
+      /* Int_t   Op_Pi0recIsEB[NPI0MAX]; */
+      /* Float_t Op_ClusIsoPi0[NPI0MAX]; */
+      /* Float_t Op_HLTIsoPi0[NPI0MAX]; */
+      /* Int_t   Op_nCrisG1[NPI0MAX]; */
+      /* Int_t   Op_nCrisG2[NPI0MAX]; */
+      /* Float_t Op_enG1_cor[NPI0MAX]; */
+      /* Float_t Op_enG2_cor[NPI0MAX]; */
+      /* Float_t Op_etaG1_cor[NPI0MAX]; */
+      /* Float_t Op_etaG2_cor[NPI0MAX]; */
+      /* Float_t Op_phiG1_cor[NPI0MAX]; */
+      /* Float_t Op_phiG2_cor[NPI0MAX]; */
+      /* Float_t Op_mPi0_cor[NPI0MAX]; */
+      /* Float_t Op_etaPi0_cor[NPI0MAX]; */
+      /* Float_t Op_ptPi0_cor[NPI0MAX]; */
+      /* Float_t Op_DeltaRG1G2[NPI0MAX]; */
+      /* Float_t Op_Es_e1_1[NPI0MAX]; */
+      /* Float_t Op_Es_e1_2[NPI0MAX]; */
+      /* Float_t Op_Es_e2_1[NPI0MAX]; */
+      /* Float_t Op_Es_e2_2[NPI0MAX]; */
+      /* Float_t Op_S4S9_1[NPI0MAX]; */
+      /* Float_t Op_S4S9_2[NPI0MAX]; */
+      /* Float_t Op_S1S9_1[NPI0MAX]; */
+      /* Float_t Op_S1S9_2[NPI0MAX]; */
+      /* Float_t Op_S2S9_1[NPI0MAX]; */
+      /* Float_t Op_S2S9_2[NPI0MAX]; */
+      /* Float_t Op_Time_1[NPI0MAX]; */
+      /* Float_t Op_Time_2[NPI0MAX]; */
+      /* Float_t Op_DeltaR_1[NPI0MAX]; */
+      /* Float_t Op_DeltaR_2[NPI0MAX]; */
+      /* Float_t Op_enG1_nocor[NPI0MAX]; */
+      /* Float_t Op_enG2_nocor[NPI0MAX]; */
+      /* Float_t Op_etaG1_nocor[NPI0MAX]; */
+      /* Float_t Op_etaG2_nocor[NPI0MAX]; */
+      /* Float_t Op_phiG1_nocor[NPI0MAX]; */
+      /* Float_t Op_phiG2_nocor[NPI0MAX]; */
+      /* Float_t Op_ptPi0_nocor[NPI0MAX]; */
+      /* Float_t Op_mPi0_nocor[NPI0MAX]; */
+      /* Float_t Op_enG1_true[NPI0MAX]; */
+      /* Float_t Op_enG2_true[NPI0MAX]; */
+      /* Int_t Op_iEtaiX_1[NPI0MAX]; */
+      /* Int_t Op_iEtaiX_2[NPI0MAX]; */
+      /* Int_t Op_iPhiiY_1[NPI0MAX]; */
+      /* Int_t Op_iPhiiY_2[NPI0MAX]; */
+      /* Int_t Op_iEta_1on5[NPI0MAX]; */
+      /* Int_t Op_iEta_2on5[NPI0MAX]; */
+      /* Int_t Op_iPhi_1on2[NPI0MAX]; */
+      /* Int_t Op_iPhi_2on2[NPI0MAX]; */
+      /* Int_t Op_iEta_1on2520[NPI0MAX]; */
+      /* Int_t Op_iEta_2on2520[NPI0MAX]; */
+      /* Int_t Op_iPhi_1on20[NPI0MAX]; */
+      /* Int_t Op_iPhi_2on20[NPI0MAX]; */
+      // Optmization tree's variables
+
 
       vector<float> Es_1;
       vector<float> Es_2;
@@ -384,8 +524,8 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       TH1F *triggerComposition_EE; // require that HLT in EE fired
       bool areLabelsSet_;
 
-      std::map< std::string, int > l1TrigNames_;
-      bool l1TrigBit_[128];
+      /* std::map< std::string, int > l1TrigNames_; */
+      /* bool l1TrigBit_[128]; */
       vector<float> vs4s9;
       vector<float> vs1s9;
       vector<float> vs2s9;
@@ -461,5 +601,10 @@ class FillEpsilonPlot : public edm::EDAnalyzer {
       int myLumiBlock;
       int myRun;
       int myBunchCrossing;
+
+      // PU info for MC
+      Float_t nPUtrue_;
+      std::map<Int_t,Int_t> nPUobs_;
+      Int_t nPUobs_BX0_;
 
 };

@@ -54,6 +54,15 @@
 using namespace std;
 using namespace RooFit;
 
+// example: 
+//
+//root -l -b -q 'findFitFileFromFitIndex.C+(5000,"/eos/cms/store/group/dpg_ecal/alca_ecalcalib/piZero2017/mciprian/","AlcaP0_Run2016G_sel17optim_reg12",0,true)'
+//
+// returns number of fit file that contains fit with index 5000. This can be used with drawFitsSingleFile.sh
+// It looks inside /eos/cms/store/group/dpg_ecal/alca_ecalcalib/piZero2017/mciprian/AlcaP0_Run2016G_sel17optim_reg12/iter_0/ and search for fits in EB
+
+// note that fro EB it is easy because the file number is the integer part of fitIndex/(#fit per job), where the denominator is tipically 2000 (see parameters.py)
+
 void findFitFileFromFitIndex(const Int_t& fitIndex = 5000,
 			     const string& eosPath = "/eos/cms/store/group/dpg_ecal/alca_ecalcalib/piZero2017/mciprian/",
 			     const string& dirName = "AlcaP0_Run2016G_sel17optim_reg12", 
@@ -65,6 +74,7 @@ void findFitFileFromFitIndex(const Int_t& fitIndex = 5000,
   Int_t nMaxFile = isEB ? 30 : 7; // fitRes files goes from 0 to 30 (7) in EB (EE)
 
   string BarrelOrEndcap = isEB ? "Barrel" : "Endcap";
+  Bool_t fitFound = false;
 
   for (Int_t iFile = 0; iFile <= nMaxFile; iFile++ ) {
 
@@ -78,7 +88,7 @@ void findFitFileFromFitIndex(const Int_t& fitIndex = 5000,
     }
 
     string fit_rooplot = Form("Fit_n_%d_attempt0_rp",fitIndex);
-    Bool_t fitFound = f->GetListOfKeys()->Contains(fit_rooplot.c_str());
+    fitFound = f->GetListOfKeys()->Contains(fit_rooplot.c_str());
 
     f->Close();
     delete f;
@@ -89,5 +99,7 @@ void findFitFileFromFitIndex(const Int_t& fitIndex = 5000,
     }
 
   }
+
+  if (not fitFound) cout << "Sorry, I didn't find the fit with index " << fitIndex << " anywhere." << endl;
 
 }
